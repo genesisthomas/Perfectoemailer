@@ -14,7 +14,7 @@ with open("README.md", "r") as fh:
 setup(
      name='perfectoemailer',
     #  version='1.0.0', #testpypi
-     version='1.0.6',
+     version='1.0.7',
      author="Genesis Thomas",
      author_email="gthomas@perforce.com",
      description="perfectoemailer is an automated emailable reporter along with AI graphs & predictions",
