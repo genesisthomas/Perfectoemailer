@@ -57,7 +57,7 @@ RESOURCE_TYPE_USERS = "users"
 REPOSITORY_RESOURCE_TYPE = "repositories/media"
 report = "Report: "
 tags = ""
-report_tag = ""
+reportTag = ""
 criteria = ""
 jobName = ""
 jobNumber = ""
@@ -721,13 +721,13 @@ class my_dictionary(dict):
 """
 
 
-def payloadJobAll(report_tags, oldmilliSecs, current_time_millis, jobName, jobNumber, page, boolean):
+def payloadJobAll(reportTags, oldmilliSecs, current_time_millis, jobName, jobNumber, page, boolean):
     payload = my_dictionary()
     if oldmilliSecs != 0:
         payload.add("startExecutionTime[0]", oldmilliSecs)
-    if report_tags != "":
-        for i, report_tag in enumerate(report_tags.split(";")):
-            payload.add("tags[" + str(i) + "]", report_tag)
+    if reportTags != "":
+        for i, reportTaging in enumerate(reportTags.split(";")):
+            payload.add("tags[" + str(i) + "]", reportTaging)
     if current_time_millis != 0:
         payload.add("endExecutionTime[0]", current_time_millis)
     payload.add("_page", page)
@@ -760,14 +760,14 @@ def retrieve_tests_executions(daysOlder, page):
         current_time_millis = round(int(millisec))
     if startDate != "":
         oldmilliSecs = pastDateToMS(startDate, daysOlder)
-    global report_tag
+    global reportTag
     if jobNumber != "" and jobName != "" and startDate != "" and endDate != "":
         payload = payloadJobAll(
-            report_tag, oldmilliSecs, current_time_millis, jobName, jobNumber, page, False
+            reportTag, oldmilliSecs, current_time_millis, jobName, jobNumber, page, False
         )
     else:
         payload = payloadJobAll(
-            report_tag, oldmilliSecs, current_time_millis, jobName, jobNumber, page, True
+            reportTag, oldmilliSecs, current_time_millis, jobName, jobNumber, page, True
         )
     url = "https://" + os.environ["CLOUDNAME"] + ".reporting.perfectomobile.com"
     api_url = url + "/export/api/v1/test-executions"
@@ -1015,7 +1015,7 @@ def color_negative_red(value):
    gets' Perfecto reporting API responses, creates dict for top device failures, auto suggestions and top tests failures and prepared json
 """
 
-def prepareReport(jobName, jobNumber, report_tag):
+def prepareReport(jobName, jobNumber, reportTag):
     page = 1
     i = 0
     truncated = True
@@ -1026,7 +1026,7 @@ def prepareReport(jobName, jobNumber, report_tag):
     print("startDate: " + startDate)
     print("jobName: " + jobName)
     print("jobNumber: " + jobNumber)
-    print("tags: " + report_tag)
+    print("tags: " + reportTag)
     json_raw = os.environ["CLOUDNAME"] + "_API_output" +'.txt'
     open(json_raw, 'w').close
     while truncated == True:
@@ -1093,8 +1093,8 @@ def prepareReport(jobName, jobNumber, report_tag):
         ori_df = df
         df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
     # No support for tags in consolidation
-    # if report_tag != "":
-    #     l = [tuple(i) for i in report_tag.split(";")]
+    # if reportTag != "":
+    #     l = [tuple(i) for i in reportTag.split(";")]
     #     df = df[df[df.columns[pandas.Series(df.columns).str.startswith('tags/')]].apply(tuple, axis = 1).astype(str).isin(l)]
     df = df_to_xl(df, "final")
     if (len(df)) < 1:
@@ -2998,7 +2998,7 @@ def main():
                 global trends
                 global report
                 global tags
-                global report_tag
+                global reportTag
                 global live_report_filename
                 consolidate = ""
                 xlformat = "csv"
@@ -3052,9 +3052,9 @@ def main():
                         tags, criteria = get_report_details(
                             item, temp, "tags", criteria
                         )
-                    if "report_tag" in item:
-                            report_tag, criteria = get_report_details(
-                            item, temp, "report_tag", criteria
+                    if "reportTag" in item:
+                            reportTag, criteria = get_report_details(
+                            item, temp, "reportTag", criteria
                         )
                     if "attachmentName" in item:
                         live_report_filename, criteria = get_report_details(
@@ -3087,20 +3087,16 @@ def main():
             for f in filelist:
                 os.remove(f)
 
-            graphs, df = prepareReport(jobName, jobNumber, report_tag)
+            graphs, df = prepareReport(jobName, jobNumber, reportTag)
             if not jobName:
                 criteria = "start: " + startDate + ", end: " + endDate
             else:
                 criteria += jobName
             if jobNumber != "":
                 criteria += " (Build Number: " + jobNumber
-            if not "(" in criteria:
-                criteria += "("
-            else:
-                criteria += ", "
             if os.environ["consolidate"] != "":
                 criteria += (
-                    " start: "
+                    ", start: "
                     + str(df["startTime"].iloc[-1]).split(" ", 1)[0]
                     + ", end: "
                     + str(df["startTime"].iloc[0]).split(" ", 1)[0]
@@ -3115,8 +3111,8 @@ def main():
                 title = report + criteria + ")"
             else:
                 title = report + criteria
-            if report_tag != "":
-                title += " tags: " + report_tag
+            if reportTag != "":
+                title += " tags: " + reportTag
             execution_summary = create_summary(df, title, "status", "device_summary",)
             failed = df[(df["status"] == "FAILED")]
             passed = df[(df["status"] == "PASSED")]
@@ -3135,11 +3131,12 @@ def main():
                     "platforms/0/os": "OS",
                     "status": "Test Status",
                     "failureReasonName": "Custom Failure Reason",
+                    "platforms/0/osVersion": "Version"
                 }
             )
             global monthlyStats
             monthlyStats = df.pivot_table(
-                index=["month", "week", "Platform", "OS", "platforms/0/osVersion"],
+                index=["month", "week", "Platform", "OS", "Version"],
                 columns="Test Status",
                 values="name",
                 aggfunc="count",
@@ -3268,7 +3265,8 @@ def main():
             # Top 5 failure reasons
             topFailureDict = {}
             failureDict = Counter(cleanedFailureList)
-            for commonError, commonErrorCount in failureDict.most_common(5):
+            count_total = 5
+            for commonError, commonErrorCount in failureDict.most_common(count_total):
                 topFailureDict[commonError] = int(commonErrorCount)
 
             # reach top errors and clean them
@@ -3277,12 +3275,12 @@ def main():
                 if "ERROR: No device was found" in commonError:
                     error = (
                         "Raise a support case for the error: *|*"
-                        + commonError.strip()
+                        + commonError.strip() + "*|*"
                     )
                 elif "Cannot open device" in commonError:
                     error = (
                         "Reserve the device/ use perfecto lab auto selection feature to avoid the error:  *|*"
-                        + commonError.strip()
+                        + commonError.strip() + "*|*"
                     )
                 elif (
                     '(UnknownError) Failed to execute command button-text click: Needle not found for expected value: "Allow" (java.lang.RuntimeException)'
@@ -3290,12 +3288,12 @@ def main():
                 ):
                     error = (
                         "Allow text/popup was not displayed as expected. It could be an environment issue as the error: *|*"
-                        + commonError.strip()
+                        + commonError.strip() + "*|*"
                     )
                 else:
                     error = (
                         "Fix the error: *|*"
-                        + commonError.strip()
+                        + commonError.strip() + "*|*"
                     )
                 report_link = df.loc[df['message'].str.startswith(commonError.strip(), na=False), "reportURL"].iloc[0]
                 suggesstionsDict[error] = [commonErrorCount, report_link]
@@ -3343,22 +3341,15 @@ def main():
                 ) - percentageCalculator(
                     totalPassCount, totalTCCount
                 ), "-"]
-            if len(suggesstionsDict) < 5:
+            if len(suggesstionsDict) < count_total:
                 if (topfailedTCNames.shape[0]) > 1:
                     for tcName, status in topfailedTCNames.itertuples(index=False):
                         suggesstionsDict[
-                            "# Fix the top failing test: "
-                            + tcName
-                            + " as the failures count is: "
-                            + str(
-                                int(
-                                    (str(status).split(",")[0]).replace("[", "").strip()
-                                )
-                            )
+                            "# Fix the top failing tests listed under 'Top Failed Tests' "
                         ] = [1,"-"]
                         break
 
-            if len(suggesstionsDict) < 5:
+            if len(suggesstionsDict) < count_total:
                 if int(percentageCalculator(totalFailCount, totalTCCount)) > 15:
                     if totalTCCount > 0:
                         suggesstionsDict[
@@ -3366,7 +3357,7 @@ def main():
                             + str(percentageCalculator(totalFailCount, totalTCCount))
                             + "%"
                         ] = [totalFailCount, "-"]
-            if len(suggesstionsDict) < 5:
+            if len(suggesstionsDict) < count_total:
                 if float(percentageCalculator(totalPassCount, totalTCCount)) < 80 and (
                     totalTCCount > 0
                 ):
@@ -3385,7 +3376,7 @@ def main():
                     ) - int(
                         percentageCalculator(totalPassCount, totalTCCount)
                     ),"-"]
-            if len(suggesstionsDict) < 5:
+            if len(suggesstionsDict) < count_total:
                 if totalTCCount == 0:
                     suggesstionsDict[
                         "# There are no executions for today. Try Continuous Integration with any tools like Jenkins and schedule your jobs today. Please reach out to Professional Services team of Perfecto for any assistance :) !"
@@ -3398,7 +3389,7 @@ def main():
             topSuggesstionsDict = Counter(suggesstionsDict)
             counter = 0
             totalImpact = 0
-            for sugg, commonErrorCount in topSuggesstionsDict.most_common(5):
+            for sugg, commonErrorCount in topSuggesstionsDict.most_common(count_total):
                 impact = 1
                 if sugg.startswith("# "):
                     jsonObj.recommendation[counter].ReportURL =  '-'
