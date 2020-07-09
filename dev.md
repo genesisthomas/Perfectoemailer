@@ -1,4 +1,4 @@
-# perfectoemailer
+# perfectoai
 
 ## Steps to contribute to this python package by testing it in test pypi:
 
@@ -27,19 +27,19 @@ Using Python’s Virtual for testing:<br />
 
 Install test package in local:<br /> 
 
-    pip3 uninstall perfectoemailer
-    pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple perfectoemailer -U
+    pip3 uninstall perfectoai
+    pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple perfectoai -U
 
     ** below is applicable only for pushing the package to main pypi:
-    pip3 install perfectoemailer -U
+    pip3 install perfectoai -U
     
     Mac: 
-    python3 -m pip install perfectoemailer -U
+    python3 -m pip install perfectoai -U
 
     
 Python code performance check:<br /> 
 
     Navigate to perfecto folder in terminal/cmd. 
     pip install snakeviz
-    python3 -m cProfile -o temp.dat perfectoemailer.py -c ps -s "---" 
+    python3 -m cProfile -o temp.dat perfectoai.py -c ps -s "---" 
     snakeviz temp.dat

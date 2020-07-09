@@ -1150,6 +1150,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                             hover_data=df.columns,
                             template="seaborn",
                             opacity=0.5,
+                            height=400
                         )
                     else:
                         fig = px.histogram(
@@ -1165,6 +1166,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                             },
                             template="seaborn",
                             opacity=0.5,
+                            height=400
                         )
                     predict_df = df.loc[df["job/name"] == job]
             else:
@@ -1181,6 +1183,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                     hover_data=df.columns,
                     template="seaborn",
                     opacity=0.5,
+                    height=400
                 )
             predict_df = (
                 predict_df.groupby(["startDate"])
@@ -1257,7 +1260,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                             + header
                             + '><b><center>'
                             + job
-                            + ' Prediction</center></b></label></div><div align="center" class="tab-content1" '
+                            + ' prediction</center></b></label></div><div align="center" class="tab-content1" '
                             + tabcontent
                             + ">"
                             + '<img src="data:image/png;base64, {}"'.format(
@@ -1277,7 +1280,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                                 + str(counter)
                                 + '">'
                                 + job
-                                + ' Prediction</label><div class="tab-content1"><div class="predictionDiv">'
+                                + ' prediction</label><div class="tab-content1"><div class="predictionDiv">'
                                 + fig.to_html(full_html=False, include_plotlyjs="cdn")
                                 + " </img></div></p></div>"
                             )
@@ -1552,6 +1555,7 @@ def update_fig(fig, type, job, duration):
         hovermode="x unified",
         yaxis={"tickformat": ".0f"},
         xaxis_tickformat="%d/%b/%y",
+        height=400,
     )
     fig.update_yaxes(automargin=True)
     if type == "prediction":
@@ -2987,6 +2991,8 @@ def main():
             totalUnknownCount = 0
             totalTCCount = 0
             scriptingIssuesCount = 0
+            appCrashIssuesCount = 0
+            environmentIssuesCount = 0
             orchestrationIssuesCount = 0
             try:
                 global criteria
@@ -3256,8 +3262,10 @@ def main():
                         cleanedFailureList[error.strip()] += 1
                     else:
                         cleanedFailureList[error.strip()] = commonErrorCount
+                    appCrashIssuesCount =  len(df.loc[df['Custom Failure Reason'] == "Application crashed"])
+                    environmentIssuesCount = len(df.loc[df['message'].str.startswith("Error: Request failed with", na=False)])
                     scriptingIssuesCount = (totalFailCount + blockedCount) - (
-                        orchestrationIssuesCount + labIssuesCount
+                        orchestrationIssuesCount + labIssuesCount + appCrashIssuesCount + environmentIssuesCount
                     )
                     with open(failureListFileName, "a", encoding="utf-8") as myfile:
                         myfile.write(str(error.strip())+'\n*******************************************\n')
@@ -3317,6 +3325,8 @@ def main():
                         {
                             "#Issues": "Count ->",
                             "#Scripting": scriptingIssuesCount,
+                            "#App Crash": appCrashIssuesCount,
+                            "#Environment Issues": environmentIssuesCount,
                             "#Lab": labIssuesCount,
                             "#Orchestration": orchestrationIssuesCount,
                         },
