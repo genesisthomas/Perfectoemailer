@@ -732,8 +732,9 @@ def payloadJobAll(reportTags, oldmilliSecs, current_time_millis, jobName, jobNum
         payload.add("endExecutionTime[0]", current_time_millis)
     payload.add("_page", page)
     if jobName != "":
-        for i, job in enumerate(jobName.split(";")):
-            payload.add("jobName[" + str(i) + "]", job)
+        if jobName != "All Jobs":
+            for i, job in enumerate(jobName.split(";")):
+                payload.add("jobName[" + str(i) + "]", job)
     if jobNumber != "" and boolean:
         for i, jobNumber in enumerate(jobNumber.split(";")):
             payload.add("jobNumber[" + str(i) + "]", int(jobNumber))
@@ -886,6 +887,7 @@ def get_final_df(files):
             df = df.append(pandas.read_csv(file, low_memory=False))
         else:
             df = df.append(pandas.read_excel(file))
+        print("Analysing file: " + str(file) + " , row count: " + str(len(df)))
     df = df_formatter(df)
     return df
 
@@ -1043,6 +1045,8 @@ def prepareReport(jobName, jobNumber, reportTag):
             raise Exception("please change the offline token for your cloud")
         if "userMessage': 'Missing Perfecto-TenantId header" in str(executions):
             raise Exception("Check the cloud name and security tokens")
+        if "userMessage': 'Time period is not in supported range" in str(executions):
+            raise Exception("Time period is not in supported range. Check your startDate parameter")
         try:
             executionList = executions["resources"]
         except TypeError:
@@ -1086,12 +1090,14 @@ def prepareReport(jobName, jobNumber, reportTag):
     df = get_final_df(files)
     df = df.sort_values(by=["startDate"], ascending=False)
     if jobNumber != "" and jobName != "":
-        ori_df = df
-        df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
-        df = df[df["job/number"].round(0).astype(int).isin(jobNumber.split(";"))]
+        if jobName != "All Jobs":
+            ori_df = df
+            df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
+            df = df[df["job/number"].round(0).astype(int).isin(jobNumber.split(";"))]
     if jobNumber == "" and jobName != "":
-        ori_df = df
-        df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
+        if jobName != "All Jobs":
+            ori_df = df
+            df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
     # No support for tags in consolidation
     # if reportTag != "":
     #     l = [tuple(i) for i in reportTag.split(";")]
@@ -1135,7 +1141,7 @@ def prepareReport(jobName, jobNumber, reportTag):
             predict_df = df
             fig = []
             if job != "Overall!":
-                if job in jobName:
+                if job in jobName or jobName == "All Jobs":
                     if duration == "dates":
                         fig = px.histogram(
                             df.loc[df["job/name"] == job],
@@ -1228,8 +1234,8 @@ def prepareReport(jobName, jobNumber, reportTag):
                         + fig.to_html(full_html=False, include_plotlyjs="cdn")
                         + "</div>"
                     )
-            if job == "Overall!" or job in jobName:
-                if jobNumber == "":
+            if job == "Overall!" or job in jobName or jobName == "All Jobs":
+                if job in jobName or jobName == "All Jobs":
                     if len(predict_df.index) > 1:
                         predict_df = predict_df.rename(
                             columns={"startDate": "ds", "#status": "y"}
@@ -2992,6 +2998,7 @@ def main():
             totalTCCount = 0
             scriptingIssuesCount = 0
             appCrashIssuesCount = 0
+            testDataIssuesCount = 0
             environmentIssuesCount = 0
             orchestrationIssuesCount = 0
             try:
@@ -3249,7 +3256,7 @@ def main():
                     regex = ""
                     if os.environ["regex"] != "":
                         regex = "|" + os.environ["regex"]
-                    regEx_Filter = "Build info:|For documentation on this error|at org.xframium.page|Scenario Steps:| at WebDriverError|\(Session info:|XCTestOutputBarrier\d+|\s\tat [A-Za-z]+.[A-Za-z]+.|View Hierarchy:|Got: |Stack Trace:|Report Link|at dalvik.system|Output:\nUsage|t.*Requesting snapshot of accessibility|\{ Error\:|at\sendReadableNT|at\sFunction|\sat\smakeRequest" + regex
+                    regEx_Filter = "Build info:|For documentation on this error|at org.xframium.page|Scenario Steps:| at WebDriverError|\(Session info:|XCTestOutputBarrier\d+|\s\tat [A-Za-z]+.[A-Za-z]+.|View Hierarchy:|Got: |Stack Trace:|Report Link|at dalvik.system|Output:\nUsage|t.*Requesting snapshot of accessibility|\{ Error\:|at\sendReadableNT|at\sFunction|\sat\smakeRequest|at\sObject\.\_errnoException|\"stack\"\:|('|)\n.*Error\:\s|at\sRequest.callback|\n\s+at\s" + regex
                     if re.search(regEx_Filter, error):
                         error = str(re.compile(regEx_Filter).split(error)[0])
                         if "An error occurred. Stack Trace:" in error:
@@ -3264,8 +3271,9 @@ def main():
                         cleanedFailureList[error.strip()] = commonErrorCount
                     appCrashIssuesCount =  len(df.loc[df['Custom Failure Reason'] == "Application crashed"])
                     environmentIssuesCount = len(df.loc[df['message'].str.startswith("Error: Request failed with", na=False)])
+                    testDataIssuesCount = len(df.loc[df['message'].str.startswith("TEST_DATA_ERROR", na=False)])
                     scriptingIssuesCount = (totalFailCount + blockedCount) - (
-                        orchestrationIssuesCount + labIssuesCount + appCrashIssuesCount + environmentIssuesCount
+                        orchestrationIssuesCount + labIssuesCount + appCrashIssuesCount + environmentIssuesCount + testDataIssuesCount
                     )
                     with open(failureListFileName, "a", encoding="utf-8") as myfile:
                         myfile.write(str(error.strip())+'\n*******************************************\n')
@@ -3327,6 +3335,7 @@ def main():
                             "#Scripting": scriptingIssuesCount,
                             "#App Crash": appCrashIssuesCount,
                             "#Environment Issues": environmentIssuesCount,
+                            "#Test Data Issues": testDataIssuesCount,
                             "#Lab": labIssuesCount,
                             "#Orchestration": orchestrationIssuesCount,
                         },
@@ -3366,7 +3375,7 @@ def main():
                             "# Fix the failures. The total failures % is too high (%) : "
                             + str(percentageCalculator(totalFailCount, totalTCCount))
                             + "%"
-                        ] = [totalFailCount, "-"]
+                        ] = [str(percentageCalculator(totalFailCount, totalTCCount)), "-"]
             if len(suggesstionsDict) < count_total:
                 if float(percentageCalculator(totalPassCount, totalTCCount)) < 80 and (
                     totalTCCount > 0
