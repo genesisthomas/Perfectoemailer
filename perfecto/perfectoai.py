@@ -1249,6 +1249,9 @@ def prepareReport(jobName, jobNumber, reportTag):
                                 seasonality_mode="additive",
                                 growth="logistic",
                                 changepoint_prior_scale=0.001,
+                                weekly_seasonality=False,
+                                daily_seasonality=True,
+                                yearly_seasonality=False,
                             ).fit(predict_df, algorithm="Newton")
                         future = m.make_future_dataframe(periods=30)
                         future["cap"] = int(predict_df["y"].max()) * 2
@@ -3016,7 +3019,7 @@ def main():
                 consolidate = ""
                 xlformat = "csv"
                 port = ""
-                orcaport = ""
+                orcaport = "8000"
                 temp = ""
                 regex = ""
                 report_array = email_report.split("|")
