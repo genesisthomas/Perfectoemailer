@@ -1,4 +1,4 @@
-# Perfectoemailer
+# Perfectoai
 
 
 ## Recommended system configuration:
@@ -14,9 +14,13 @@
     
   2. Install [pip](https://pip.pypa.io/en/stable/installing/)
     
-  3. Run the following command from command prompt/ terminal:
+  3. Run the following command from command prompt:
  
-        `pip3 install perfectoemailer -U`
+        `pip install perfectoai -U`
+    
+    terminal:
+
+        `pip3 install perfectoai -U`
 
     Additional requirements for Report processing:  
 
@@ -32,77 +36,75 @@
 ## Usage:
 
 
-
-
 ## Examples:
 
 ### Device Operations:
 
 1. List all available devices:  <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>"`
     
 
 2. List all available devices with an optional feature to provide custom logo ( Syntax: -l "www.<official customer website>): <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -l "www.perfecto.io"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -l "www.perfecto.io"`
     
 3. List all available devices using perfecto username and password: <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<username/email>>:<<password>>"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<username/email>>:<<password>>"`
     
 
 4. List all devices irrespective on device status: <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -t all`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -t all`
     
 
 5. Reboot, clean up and get network settings for all devices in parallel: <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -t "all" -a "reboot:true;cleanup:true;get_network_settings:true"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -t "all" -a "reboot:true;cleanup:true;get_network_settings:true"`
     
 
 6. Limit the selection of devices by applying any/multiple Get Devices List parameters and regular expressions using the following syntax: {param1}:{value1};{param2}:{value2}
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -d "model:Galaxy S.*;description:.*Genesis;dynamicField.ipa:Test-Android.*"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -d "model:Galaxy S.*;description:.*Genesis;dynamicField.ipa:Test-Android.*"`
 
 7. get network settings like airplane mode, wifi and data for only available galaxy devices in parallel: <br />
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>"  -a "get_network_settings:true" -d "model:Galaxy.*"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>"  -a "get_network_settings:true" -d "model:Galaxy.*"`
 
 
 ### Repository clean-up:
     
 1. Syntax to automatically display older repository items: -a "clean_repo|false|{do you have admin role? - true|false }|media repository locations|number of days to select items older than the provided date". The following example will automatically display repository media items older than 15 days
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -a "clean_repo|false|true|PUBLIC:Genesis/Temp/,PRIVATE:Python,GROUP:Genesis|15"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -a "clean_repo|false|true|PUBLIC:Genesis/Temp/,PRIVATE:Python,GROUP:Genesis|15"`
 
 2. Syntax to automatically delete older repository items: -a "clean_repo|true|{do you have admin role? - true|false} |media repository locations|number of days to select items older than the provided date". The following example will automatically delete and display repository media items older than 15 days
 
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -a "clean_repo|true|true|PUBLIC:Genesis/Temp/,PRIVATE:Python,GROUP:Genesis|15"`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -a "clean_repo|true|true|PUBLIC:Genesis/Temp/,PRIVATE:Python,GROUP:Genesis|15"`
 
 
 ### Limit User list:
 
 1. Syntax to limit/filter users list: -u "{param1}:{value1};{param2}:{value2}"
     
-     `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -u "roles:AUTOMATION;firstName:Genesis"`
+     `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -u "roles:AUTOMATION;firstName:Genesis"`
     
 ### General:
 
 1. Re-runs the same execution with a specified sleep time: <br />
  
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -r 1`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -r 1`
     
 
 2. Skip's output in html format: ( for faster results in terminal/cmd ) <br />
  
-    `perfectoemailer -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -o false`
+    `perfectoai -c "<<CLOUD NAME>>" -s "<<SECURITY TOKEN>>" -o false`
 
 Notes: </br>
     Reach out to Perfecto support if you want to enable non-admin users the ability to delete media repository files for users who have access to the same group folder.
 	We recommend that you assign a unique description or dynamicField for devices that are applicable for reboot and utilize the -d parameter for reboot. See the Limit the selection of the devices example.</br>
-	perfectoemailer is subject to the same restrictions and limitations as the Reboot device API, with regard to locked phones and limitations to reboot devices by certain manufacturers. For details, see [Devices Restart Limitation](https://developers.perfectomobile.com/display/TT/Devices+Restart+Limitation). However, the latest perfecto actions version will automatically skips manufacturers which are listed as limitations for reboot. </br>
+	perfectoai is subject to the same restrictions and limitations as the Reboot device API, with regard to locked phones and limitations to reboot devices by certain manufacturers. For details, see [Devices Restart Limitation](https://developers.perfectomobile.com/display/TT/Devices+Restart+Limitation). However, the latest perfecto actions version will automatically skips manufacturers which are listed as limitations for reboot. </br>
 
 ### Note:
 
@@ -137,21 +139,21 @@ Notes: </br>
 
     6. Click on Actions and then click on New.
     7. Browse the actions.bat file, a sample .bat file is found here: https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/samples/actions.bat.
-    8. Make sure to edit the actions.bat file and supply your preferred arguments to perfectoemailer [ line:2 ].
-    9. perfectoemailer will be triggered based on the trigger.
+    8. Make sure to edit the actions.bat file and supply your preferred arguments to perfectoai [ line:2 ].
+    9. perfectoai will be triggered based on the trigger.
 <img src="https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/docs/win/3.png" height="360" width="760"/>
 
-    10. Results will be displayed as like the image below if -o is not set to false in perfectoemailer arguments.
+    10. Results will be displayed as like the image below if -o is not set to false in perfectoai arguments.
 <img src="https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/docs/win/4.png" height="360" width="760"/>
 
 ## Scheduling in Mac:
 
-    1. Type "which perfectoemailer" in terminal to get the physical path of perfectoemailer.
+    1. Type "which perfectoai" in terminal to get the physical path of perfectoai.
 <img src="https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/docs/mac/mac1.png" height="360" width="760"/>
 
     2. Download a sample shell file from  here: https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/samples/actions.sh.
     3. Edit the downloaded .sh file.
-    4. Set the physical path of perfectoemailer and applicable arguments.
+    4. Set the physical path of perfectoai and applicable arguments.
     5. Open terminal and navigate to the location where the actions.sh was downloaded and run the following command:
         chmod +x ./actions.sh 
     6. You need to grant cron full disk access. Drag /usr/sbin/cron into the Full Disk Access area in System Preferences > Security & Privacy > Privacy tab.
@@ -195,24 +197,24 @@ Notes: </br>
     10. WINDOWS:
         Add a build step: Execute Windows batch command and add the below commands inside it:
         
-            pip install -U perfectoemailer
+            pip install -U perfectoai
             del /s /q "C:\Users\<<Windows user name>>\AppData\Local\Temp\output\*.*"
-            perfectoemailer -c <<CLOUD NAME, e.g. demo>>  -s "<<SECURITY TOKEN>>" <<ADDITIONAL ARGUMENTS AS APPLICABLE>>
+            perfectoai -c <<CLOUD NAME, e.g. demo>>  -s "<<SECURITY TOKEN>>" <<ADDITIONAL ARGUMENTS AS APPLICABLE>>
             xcopy /s "C:\Users\<<Windows user name>>\AppData\Local\Temp\output" .
             EXIT /B
 <img src="https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/docs/jenkins/2.png" height="360" width="760"/>        
    
         MAC:
         Add a build step: Execute shell and add the below commands inside it:
-            <<PATH TO PIP>>/pip3 install -U perfectoemailer
+            <<PATH TO PIP>>/pip3 install -U perfectoai
             rm -rf "/tmp/output/*.*"
-            perfectoemailer -c <<CLOUD NAME, e.g. demo>> -s "<<SECURITY TOKEN>>" <<ADDITIONAL ARGUMENTS AS APPLICABLE>>
+            perfectoai -c <<CLOUD NAME, e.g. demo>> -s "<<SECURITY TOKEN>>" <<ADDITIONAL ARGUMENTS AS APPLICABLE>>
             cp /tmp/output/result.html .
 <img src="https://github.com/PerfectoMobileSA/Device_actions_reporter/blob/master/docs/jenkins/3.png" height="360" width="760"/>   
 
     Note: 
        1. Update preferred values within <<>> as applicable
-       2. Use which command in terminal to find path of pip3/perfectoemailer. E.g. "which pip3" will show the path of pip3.
+       2. Use which command in terminal to find path of pip3/perfectoai. E.g. "which pip3" will show the path of pip3.
        
     11. Add post-build Actions: Archive the artifacts with files to archive: result.html (Screenshots above)
     12. Add post-build Actions: Publish HTML reports with index page: result.html (Screenshots above)

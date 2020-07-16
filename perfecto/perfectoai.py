@@ -1109,6 +1109,9 @@ def prepareReport(jobName, jobNumber, reportTag):
 
     # ggplot2 #plotly_dark #simple_white
     graphs = []
+    interactive_graphs = []
+    width=400
+    height=400
     if trends == "true":
         import plotly.express as px
         import plotly
@@ -1156,7 +1159,8 @@ def prepareReport(jobName, jobNumber, reportTag):
                             hover_data=df.columns,
                             template="seaborn",
                             opacity=0.5,
-                            height=400
+                            height=height,
+                            width=width
                         )
                     else:
                         fig = px.histogram(
@@ -1172,7 +1176,8 @@ def prepareReport(jobName, jobNumber, reportTag):
                             },
                             template="seaborn",
                             opacity=0.5,
-                            height=400
+                            height=height,
+                            width=width
                         )
                     predict_df = df.loc[df["job/name"] == job]
             else:
@@ -1189,7 +1194,8 @@ def prepareReport(jobName, jobNumber, reportTag):
                     hover_data=df.columns,
                     template="seaborn",
                     opacity=0.5,
-                    height=400
+                    height=height,
+                    width=width
                 )
             predict_df = (
                 predict_df.groupby(["startDate"])
@@ -1222,17 +1228,15 @@ def prepareReport(jobName, jobNumber, reportTag):
                     + reportDiv
                     + "> </img></div><br>"
                 )
-                with open(live_report_filename, "a") as f:
-                    f.write(
-                        '<input type="radio" id="tab'
+                interactive_graphs.append(
+                        '<div style="text-align: center;"><input type="radio" id="tab'
                         + str(counter)
                         + '" name="tabs" checked=""/><label for="tab'
                         + str(counter)
-                        + '">'
+                        + '">job: '
                         + job
-                        + ' trend</label><div class="tab-content1">'
-                        + fig.to_html(full_html=False, include_plotlyjs="cdn")
-                        + "</div>"
+                        + '</label><div class="tab-content1" style="background-color:white;">'
+                        + str(fig.to_html(full_html=False, include_plotlyjs="cdn")).replace("<div",'<div style="float:left;"')    
                     )
             if job == "Overall!" or job in jobName or jobName == "All Jobs":
                 if job in jobName or jobName == "All Jobs":
@@ -1261,15 +1265,15 @@ def prepareReport(jobName, jobNumber, reportTag):
                         future["floor"] = floor
                         forecast = m.predict(future)
                         forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail()
-                        fig = plot_plotly(m, forecast)
+                        fig = plot_plotly(m, forecast, figsize=([height,width]))
                         fig = update_fig(fig, "prediction", job, duration)
                         encoded = base64.b64encode(plotly.io.to_image(fig))
-                        counter += 1
+                        # counter += 1
                         graphs.append('<div '
                             + header
                             + '><b><center>'
                             + job
-                            + ' prediction</center></b></label></div><div align="center" class="tab-content1" '
+                            + ' prediction</center></b></label></div><div align="center" style="background-color:white;" class="tab-content1" '
                             + tabcontent
                             + ">"
                             + '<img src="data:image/png;base64, {}"'.format(
@@ -1281,17 +1285,10 @@ def prepareReport(jobName, jobNumber, reportTag):
                             + reportDiv
                             + "> </img></div><br>"
                         )
-                        with open(live_report_filename, "a") as f:
-                            f.write(
-                                '<input type="radio" id="tab'
-                                + str(counter)
-                                + '" name="tabs" checked=""/><label for="tab'
-                                + str(counter)
-                                + '">'
-                                + job
-                                + ' prediction</label><div class="tab-content1"><div class="predictionDiv">'
+                        interactive_graphs.append(
+                                '<div class="predictionDiv">'
                                 + fig.to_html(full_html=False, include_plotlyjs="cdn")
-                                + " </img></div></p></div>"
+                                + " </img></p></div></div>"
                             )
                     else:
                         print(
@@ -1301,13 +1298,14 @@ def prepareReport(jobName, jobNumber, reportTag):
                         )
             counter += 1
         graphs.append("</div>")
+        interactive_graphs.append("</div>")
         with open(live_report_filename, "a") as f:
             f.write("</div>")
     if os.name == 'nt':
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         subprocess.call('taskkill /F /IM Electron.exe', startupinfo=si)
-    return graphs, df
+    return graphs, interactive_graphs, df
 
 
 """
@@ -1564,12 +1562,11 @@ def update_fig(fig, type, job, duration):
         hovermode="x unified",
         yaxis={"tickformat": ".0f"},
         xaxis_tickformat="%d/%b/%y",
-        height=400,
     )
     fig.update_yaxes(automargin=True)
     if type == "prediction":
         fig.update_layout(
-            title={"text": ""}, yaxis_title="Total tests executed",
+            title={"text": ""}, yaxis_title="Total tests executed",autosize=True,
         )
     return fig
 
@@ -1902,7 +1899,8 @@ def get_style():
                 .predictionDiv {{
                     overflow-x: auto;
                     text-align: center;
-                    margin-left:4%;
+                    display: inline-block;
+                    float: left;
                 }}
               
                 #report{{
@@ -1940,6 +1938,7 @@ def get_style():
                     overflow:hidden;
                 }}
 
+                @media screen and (max-width: 600px) {{
                 #nestle-section  input:checked + label + .tab-content1{{
                     padding: 10px;
                     height: auto;
@@ -1949,7 +1948,19 @@ def get_style():
                     transition: height 1s ease;
                     overflow: scroll;
                     display: block;
-                }}
+                }}}}
+                @media screen and (min-width: 601px) {{
+                #nestle-section  input:checked + label + .tab-content1{{
+                    padding: 10px;
+                    height: auto;
+                    -moz-transition: height 1s ease;
+                    -webkit-transition: height 1s ease;
+                    -o-transition: height 1s ease;
+                    transition: height 1s ease;
+                    overflow: scroll;
+                    display: flex;
+                    justify-content: center;  
+                }}}}
 
                 #nestle-section input:checked + label{{
                     background-color:darkkhaki;
@@ -3103,7 +3114,7 @@ def main():
             for f in filelist:
                 os.remove(f)
 
-            graphs, df = prepareReport(jobName, jobNumber, reportTag)
+            graphs, interactive_graphs, df = prepareReport(jobName, jobNumber, reportTag)
             if not jobName:
                 criteria = "start: " + startDate + ", end: " + endDate
             else:
@@ -3509,7 +3520,9 @@ def main():
                         )
                     )
                 )
-
+            with open(live_report_filename, "a") as f:
+                f.write(''.join(interactive_graphs)
+                )
             import webbrowser
             import http.server
             import socketserver
