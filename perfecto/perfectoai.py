@@ -33,6 +33,7 @@ from pandas.plotting import table
 import sys
 import numpy as np
 from openpyxl.reader.excel import load_workbook
+from jenkinsapi.jenkins import Jenkins
 import uuid
 from fbprophet.plot import plot_plotly
 from collections import Counter
@@ -733,8 +734,9 @@ def payloadJobAll(reportTags, oldmilliSecs, current_time_millis, jobName, jobNum
     payload.add("_page", page)
     if jobName != "":
         if jobName != "All Jobs":
-            for i, job in enumerate(jobName.split(";")):
-                payload.add("jobName[" + str(i) + "]", job)
+            if jobName != "Perfecto Integrations":
+                for i, job in enumerate(jobName.split(";")):
+                    payload.add("jobName[" + str(i) + "]", job)
     if jobNumber != "" and boolean:
         for i, jobNumber in enumerate(jobNumber.split(";")):
             payload.add("jobNumber[" + str(i) + "]", int(jobNumber))
@@ -1091,13 +1093,15 @@ def prepareReport(jobName, jobNumber, reportTag):
     df = df.sort_values(by=["startDate"], ascending=False)
     if jobNumber != "" and jobName != "":
         if jobName != "All Jobs":
-            ori_df = df
-            df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
-            df = df[df["job/number"].round(0).astype(int).isin(jobNumber.split(";"))]
+            if jobName != "Perfecto Integrations":
+                ori_df = df
+                df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
+                df = df[df["job/number"].round(0).astype(int).isin(jobNumber.split(";"))]
     if jobNumber == "" and jobName != "":
         if jobName != "All Jobs":
-            ori_df = df
-            df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
+            if jobName != "Perfecto Integrations":
+                ori_df = df
+                df = df[df["job/name"].astype(str).isin(jobName.split(";"))]
     # No support for tags in consolidation
     # if reportTag != "":
     #     l = [tuple(i) for i in reportTag.split(";")]
@@ -1144,7 +1148,7 @@ def prepareReport(jobName, jobNumber, reportTag):
             predict_df = df
             fig = []
             if job != "Overall!":
-                if job in jobName or jobName == "All Jobs":
+                if job in jobName or jobName == "All Jobs" or str(job).endswith("Sample"):
                     if duration == "dates":
                         fig = px.histogram(
                             df.loc[df["job/name"] == job],
@@ -1204,21 +1208,51 @@ def prepareReport(jobName, jobNumber, reportTag):
                 .sort_values("#status", ascending=False)
             )
             radio = 'style="box-sizing: border-box; display: none;"'
-            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: block;"'
+            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; background-color:white;-webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
             reportDiv = (
                 'style="box-sizing: border-box; overflow-x: auto; text-align: center;"'
             )
+            predictionDiv = 'style="overflow-x: auto;text-align: center;display: inline-block;float: left;background-color:white;"'
             header = 'align=center; style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: darkslategray; background-color: darkkhaki; border: 3px solid antiquewhite;"'
             if fig:
+                ci_name = os.environ["ci_name"]
+                tag = ""
+                if ci_name != "":
+                    ci_jenkins_url = os.environ["ci_jenkins_url"]
+                    ci_username = os.environ["ci_username"]
+                    ci_token = os.environ["ci_token"]
+                    ci_href = ""
+                    ci_server_url = ""
+                    ci_src = ""
+                    if "jenkins" in ci_name.lower(): 
+                        circleCIjobs = ["MavenCircleCISample","fastlane-plugin-perfecto","FastlaneEspressoCircleCISlackSample"]
+                        travisCIjobs = ["TravisSample"]
+                        group = "PerfectoMobileSA"
+                        if job in circleCIjobs:
+                            ci_server_url = "https://circleci.com/gh/" + group
+                            ci_href = ci_server_url + "/" + job
+                            ci_src = ci_server_url + "/" + job + ".svg?style=shield"
+                        elif job in travisCIjobs:
+                            ci_server_url = "https://travis-ci.org/" + group 
+                            ci_href = ci_server_url + "/" + job
+                            ci_src = ci_server_url + "/" + job + ".svg?branch=master"
+                        else:    
+                            j = Jenkins(ci_jenkins_url, username=ci_username, password=ci_token)
+                            ci_server_url = str(j).split("at ")[1]
+                            ci_href = str(ci_server_url + "/job/" + job)
+                            ci_src = ci_server_url + "/buildStatus/icon?job=" + job
+                        print("ci_server_url: " + ci_server_url + ", ci_href: "+ ci_href + ", ci_src=" + ci_src)
+                        tag = " <a href='" + ci_href + "' target='_blank'><img src='" + ci_src + "'></a>"
                 fig = update_fig(fig, "histogram", job, duration)
                 encoded = base64.b64encode(plotly.io.to_image(fig))
                 graphs.append('<div '
                     + header
-                    + '><b><center>'
+                    + '><b><center>job: '
                     + job
-                    + ' trend</center></b></label></div><div align="center" class="tab-content1" '
+                    + tag
+                    + '</center></b></label></div><div align="center" class="tab-content1" '
                     + tabcontent
-                    + ">"
+                    + "><div " + predictionDiv + ">"
                     + '<img src="data:image/png;base64, {}"'.format(
                         encoded.decode("ascii")
                     )
@@ -1226,7 +1260,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                     + job
                     + "' id='reportDiv' "
                     + reportDiv
-                    + "> </img></div><br>"
+                    + "> </img>"
                 )
                 interactive_graphs.append(
                         '<div style="text-align: center;"><input type="radio" id="tab'
@@ -1235,10 +1269,12 @@ def prepareReport(jobName, jobNumber, reportTag):
                         + str(counter)
                         + '">job: '
                         + job
+                        + tag
                         + '</label><div class="tab-content1" style="background-color:white;">'
                         + str(fig.to_html(full_html=False, include_plotlyjs="cdn")).replace("<div",'<div style="float:left;"')    
                     )
-            if job == "Overall!" or job in jobName or jobName == "All Jobs":
+                interactive_graphs.append("</div>")
+            if job == "Overall!" or job in jobName or jobName == "All Jobs" or str(jobName).endswith("Sample"):
                 if job in jobName or jobName == "All Jobs":
                     if len(predict_df.index) > 1:
                         predict_df = predict_df.rename(
@@ -1270,12 +1306,8 @@ def prepareReport(jobName, jobNumber, reportTag):
                         encoded = base64.b64encode(plotly.io.to_image(fig))
                         # counter += 1
                         graphs.append('<div '
-                            + header
-                            + '><b><center>'
-                            + job
-                            + ' prediction</center></b></label></div><div align="center" style="background-color:white;" class="tab-content1" '
-                            + tabcontent
-                            + ">"
+                            + predictionDiv
+                            + '>'
                             + '<img src="data:image/png;base64, {}"'.format(
                                 encoded.decode("ascii")
                             )
@@ -1288,8 +1320,9 @@ def prepareReport(jobName, jobNumber, reportTag):
                         interactive_graphs.append(
                                 '<div class="predictionDiv">'
                                 + fig.to_html(full_html=False, include_plotlyjs="cdn")
-                                + " </img></p></div></div>"
+                                + " </img></p></div>"
                             )
+                        interactive_graphs.append("</div>")
                     else:
                         print(
                             "Note: AI Prediction for job: "
@@ -1997,7 +2030,7 @@ def get_html_string(graphs):
         + get_style()
         + """
         <div id="nestle-section">
-        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">Summary Details</label><div class="tab-content1">
+        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["CLOUDNAME"]).upper() + """ Report</label><div class="tab-content1">
         <div class="reportDiv"> """
         + execution_summary
         + """ alt='execution summary' id='reportDiv'> </img></br></div></div>"""
@@ -2033,7 +2066,7 @@ def get_html_string(graphs):
 
 def get_html_string_email(graphs):
     bg = os.environ["bgcolor"]
-    header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: darkslategray; background-color: darkkhaki; border: 3px solid antiquewhite;"'
+    header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
     tabcontent = (
         'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: block;background-color:'
         + bg
@@ -2989,13 +3022,13 @@ def main():
         if not args["cloud_name"]:
             parser.print_help()
             parser.error(
-                "cloud_name parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoemailer -c demo"
+                "cloud_name parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoai -c demo"
             )
             exit
         if not args["security_token"]:
             parser.print_help()
             parser.error(
-                "security_token parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoemailer -c demo -s <<TOKEN>> || perfectoemailer -c demo -s <<user>>:<<password>>"
+                "security_token parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoai -c demo -s <<TOKEN>> || perfectoai -c demo -s <<user>>:<<password>>"
             )
             exit
         os.environ["CLOUDNAME"] = args["cloud_name"]
@@ -3033,6 +3066,10 @@ def main():
                 orcaport = "8000"
                 temp = ""
                 regex = ""
+                ci_name = ""
+                ci_jenkins_url = ""
+                ci_username = ""
+                ci_token = ""
                 report_array = email_report.split("|")
                 for item in report_array:
                     if "report" in item:
@@ -3091,6 +3128,22 @@ def main():
                         regex, criteria = get_report_details(
                             item, temp, "regex", criteria
                         )
+                    if "ci_name" in item:
+                            ci_name, criteria = get_report_details(
+                            item, temp, "ci_name", criteria
+                        )
+                    if "ci_jenkins_url" in item:
+                            ci_jenkins_url, criteria = get_report_details(
+                            item, temp, "ci_jenkins_url", criteria
+                        )
+                    if "ci_username" in item:
+                            ci_username, criteria = get_report_details(
+                            item, temp, "ci_username", criteria
+                        )
+                    if "ci_token" in item:
+                            ci_token, criteria = get_report_details(
+                            item, temp, "ci_token", criteria
+                        )
             except Exception as e:
                 raise Exception(
                     "Verify parameters of report, split them by | seperator/ " + str(e)
@@ -3104,6 +3157,14 @@ def main():
             os.environ["consolidate"] = ""
             os.environ["consolidate"] = consolidate
             os.environ["orcaport"] = orcaport
+            os.environ["ci_name"] = ""
+            os.environ["ci_name"] = ci_name
+            os.environ["ci_jenkins_url"] = ""
+            os.environ["ci_jenkins_url"] = ci_jenkins_url
+            os.environ["ci_username"] = ""
+            os.environ["ci_username"] = ci_username
+            os.environ["ci_token"] = ""
+            os.environ["ci_token"] = ci_token
             filelist = glob.glob(os.path.join("*." + xlformat))
             for f in filelist:
                 os.remove(f)
@@ -3326,7 +3387,7 @@ def main():
                         + commonError.strip() + "*|*"
                     )
                 report_link = df.loc[df['message'].str.startswith(commonError.strip(), na=False), "reportURL"].iloc[0]
-                suggesstionsDict[error] = [commonErrorCount, report_link]
+                suggesstionsDict[error] = [str(commonErrorCount), report_link]
             eDict = edict(
                 {
                     "status": [
@@ -3379,7 +3440,7 @@ def main():
                     for tcName, status in topfailedTCNames.itertuples(index=False):
                         suggesstionsDict[
                             "# Fix the top failing tests listed under 'Top Failed Tests' "
-                        ] = [1,"-"]
+                        ] = ['1',"-"]
                         break
 
             if len(suggesstionsDict) < count_total:
@@ -3398,45 +3459,44 @@ def main():
                         "# Fix the failures. The total pass %  is too less (%) : "
                         + str(int(percentageCalculator(totalPassCount, totalTCCount)))
                         + "%"
-                    ] = [(
-                        100
+                    ] = [str(
+                        (100
                         - (
                             percentageCalculator(
                                 totalPassCount + totalUnknownCount, totalTCCount
                             )
                             - percentageCalculator(totalPassCount, totalTCCount)
                         )
-                    ) - int(
-                        percentageCalculator(totalPassCount, totalTCCount)
-                    ),"-"]
+                    ) - int(percentageCalculator(totalPassCount, totalTCCount))),"-"]
             if len(suggesstionsDict) < count_total:
                 if totalTCCount == 0:
                     suggesstionsDict[
                         "# There are no executions for today. Try Continuous Integration with any tools like Jenkins and schedule your jobs today. Please reach out to Professional Services team of Perfecto for any assistance :) !"
-                    ] = [100,"-"]
+                    ] = [str('100'),"-"]
                 elif int(percentageCalculator(totalPassCount, totalTCCount)) > 80:
                     print(str(int(percentageCalculator(totalPassCount, totalTCCount))))
-                    suggesstionsDict["# Great automation progress. Keep it up!"] = [0, "-"]
+                    suggesstionsDict["# Great automation progress. Keep it up!"] = [str('0'), "-"]
 
                 int(percentageCalculator(totalFailCount, totalTCCount)) > 15
             topSuggesstionsDict = Counter(suggesstionsDict)
             counter = 0
             totalImpact = 0
+            print(str(topSuggesstionsDict))
             for sugg, commonErrorCount in topSuggesstionsDict.most_common(count_total):
                 impact = 1
                 if sugg.startswith("# "):
                     jsonObj.recommendation[counter].ReportURL =  '-'
                     sugg = sugg.replace("# ", "")
-                    impact = int(float(str(commonErrorCount[0])))
+                    impact = str(int(float(str(commonErrorCount[0]))))
                     jsonObj.recommendation[counter].Occurences = "-"
                 else:
                     jsonObj.recommendation[counter].Occurences =  int(float(str(commonErrorCount[0])))
                     jsonObj.recommendation[counter].ReportURL =  '<a target="_blank" href="' + commonErrorCount[1] + '">link</a>'
-                    impact = percentageCalculator(
+                    impact = str(percentageCalculator(
                         totalPassCount + int(float(str(commonErrorCount[0]))), totalTCCount
-                    ) - percentageCalculator(totalPassCount, totalTCCount)
+                    ) - percentageCalculator(totalPassCount, totalTCCount))
                 jsonObj.recommendation[counter].impact = (
-                    str(("%.2f" % round(impact, 2))) + "%"
+                    str(("%.2f" % round(int(float(str(impact))), 2))) + "%"
                 )
                 jsonObj.recommendation[counter].Recommendations = html.escape(
                     sugg.replace("*|*", "'")
@@ -3444,7 +3504,7 @@ def main():
                     .replace("}", "}}")
                     .strip()
                 )
-                totalImpact += round(impact, 2)
+                totalImpact += round(int(float(str(impact))), 2)
                 counter += 1
             global execution_status
             execution_status = pandas.DataFrame.from_dict(jsonObj.status)
@@ -3713,7 +3773,7 @@ def main():
 
             try:
                 if not platform.system() == "Darwin":
-                    os.system("taskkill /f /im perfectoemailer.exe")
+                    os.system("taskkill /f /im perfectoai.exe")
             except:
                 pass
     except Exception as e:
