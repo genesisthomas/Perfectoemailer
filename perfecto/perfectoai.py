@@ -1326,10 +1326,12 @@ def prepareReport(jobName, jobNumber, reportTag):
                             )
                         interactive_graphs.append("</div>")
                     else:
+                        interactive_graphs.append("</div>")
                         print(
                             "Note: AI Prediction for job: "
                             + job
                             + " requires more than 2 days of data to analyze!"
+                        
                         )
             counter += 1
         graphs.append("</div>")
@@ -3503,7 +3505,6 @@ def main():
             totalImpact = 0
             for sugg, commonErrorCount in sorted(suggesstionsDict.items(), key = lambda x:(x[1],x[0]), reverse=True)[:count_total]:
                 impact = 1
-                print(sugg)
                 if str(sugg) != "" and str(commonErrorCount[0]) !="":
                     if sugg.startswith("# "):
                         jsonObj.recommendation[counter].ReportURL =  '-'
