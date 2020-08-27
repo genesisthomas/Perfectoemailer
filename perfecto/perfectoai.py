@@ -2937,7 +2937,7 @@ def main():
             "-c",
             "--cloud_name",
             metavar="cloud_name",
-            help="Perfecto cloud name. (E.g. demo)",
+            help="Perfecto cloud name. (E.g. demo) or add it as a cloudName environment variable",
             nargs="?",
         )
         parser.add_argument(
@@ -2945,7 +2945,7 @@ def main():
             "--security_token",
             metavar="security_token",
             type=str,
-            help="Perfecto Security Token/ Pass your Perfecto's username and password in user:password format",
+            help="Perfecto Security Token/ Pass your Perfecto's username and password in user:password format  or add it as a securityToken environment variable",
             nargs="?",
         )
         parser.add_argument(
@@ -3017,12 +3017,15 @@ def main():
             "--bgcolor",
             type=str,
             metavar="sets the background color in report",
-            help="creates a downloadable csv/xlsx of reporting data along with AI emailable & live report with live charts, AI predictions and recommendations.",
+            help="overrides the background color in report based on provided hex color",
             nargs="?",
         )
         args = vars(parser.parse_args())
         try:
-            print("Loading cloudName: " + os.environ["cloudName"] + " from environment variable.")
+            if not args["cloud_name"]:
+                print("Loading cloudName: " + os.environ["cloudName"] + " from environment variable.")
+            else:
+                os.environ["cloudName"] = args["cloud_name"]
         except Exception:
             if not args["cloud_name"]:
                 parser.error(
@@ -3031,7 +3034,10 @@ def main():
                 exit
             os.environ["cloudName"] = args["cloud_name"]
         try:
-            print("Loading securityToken: " + os.environ["securityToken"] + " from environment variable.")
+            if not args["security_token"]:
+                print("Loading securityToken: " + os.environ["securityToken"] + " from environment variable.")
+            else:
+                os.environ["securityToken"] = args["security_token"]
         except Exception:
             if not args["security_token"]:
                 parser.error(
