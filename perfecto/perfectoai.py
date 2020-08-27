@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+import collections
 import urllib.request, urllib.parse, urllib.error
+import time
+import unicodedata
 import os
 from xml.dom import minidom
 import json
@@ -266,11 +269,11 @@ def send_request2(url):
 
 def get_url(resource, resource_id, operation):
     """get url """
-    cloudname = os.environ["CLOUDNAME"]
+    cloudname = os.environ["cloudName"]
     url = "https://" + cloudname + ".perfectomobile.com/services/" + resource
     if resource_id != "":
         url += "/" + str(resource_id)
-    token = os.environ["TOKEN"]
+    token = os.environ["securityToken"]
     if "eyJhb" in token:
         query = urllib.parse.urlencode({"operation": operation, "securityToken": token})
     else:
@@ -286,7 +289,6 @@ def get_url(resource, resource_id, operation):
             )
     url += "?" + query
     return url
-
 
 def getregex_output(response, pattern1, pattern2):
     """regex"""
@@ -772,11 +774,11 @@ def retrieve_tests_executions(daysOlder, page):
         payload = payloadJobAll(
             reportTag, oldmilliSecs, current_time_millis, jobName, jobNumber, page, True
         )
-    url = "https://" + os.environ["CLOUDNAME"] + ".reporting.perfectomobile.com"
+    url = "https://" + os.environ["cloudName"] + ".reporting.perfectomobile.com"
     api_url = url + "/export/api/v1/test-executions"
     # creates http geat request with the url, given parameters (payload) and header (for authentication)
     r = requests.get(
-        api_url, params=payload, headers={"PERFECTO_AUTHORIZATION": os.environ["TOKEN"]}
+        api_url, params=payload, headers={"PERFECTO_AUTHORIZATION": os.environ["securityToken"]}
     )
     # #print(str(r.content))
     print(str(r.url))
@@ -1031,7 +1033,7 @@ def prepareReport(jobName, jobNumber, reportTag):
     print("jobName: " + jobName)
     print("jobNumber: " + jobNumber)
     print("tags: " + reportTag)
-    json_raw = os.environ["CLOUDNAME"] + "_API_output" +'.txt'
+    json_raw = os.environ["cloudName"] + "_API_output" +'.txt'
     open(json_raw, 'w').close
     while truncated == True:
         print(
@@ -1273,7 +1275,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                         + '</label><div class="tab-content1" style="background-color:white;">'
                         + str(fig.to_html(full_html=False, include_plotlyjs="cdn")).replace("<div",'<div style="float:left;"')    
                     )
-                interactive_graphs.append("</div>")
+                # interactive_graphs.append("</div>")
             if job == "Overall!" or job in jobName or jobName == "All Jobs" or str(jobName).endswith("Sample"):
                 if job in jobName or jobName == "All Jobs":
                     if len(predict_df.index) > 1:
@@ -2019,7 +2021,7 @@ def get_html_string(graphs):
        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     		     <head><title aria-label="Report">"""
-        + str(os.environ["CLOUDNAME"]).upper()
+        + str(os.environ["cloudName"]).upper()
         + """ Report</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
@@ -2030,7 +2032,7 @@ def get_html_string(graphs):
         + get_style()
         + """
         <div id="nestle-section">
-        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["CLOUDNAME"]).upper() + """ Report</label><div class="tab-content1">
+        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["cloudName"]).upper() + """ Report</label><div class="tab-content1">
         <div class="reportDiv"> """
         + execution_summary
         + """ alt='execution summary' id='reportDiv'> </img></br></div></div>"""
@@ -2080,7 +2082,7 @@ def get_html_string_email(graphs):
        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     		     <head><title aria-label="Report">"""
-        + str(os.environ["CLOUDNAME"]).upper()
+        + str(os.environ["cloudName"]).upper()
         + """ Report</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
@@ -2249,7 +2251,7 @@ def prepare_html(user_html, table3, day):
         df = df.sort_values(by="Status")
         df.reset_index(drop=True, inplace=True)
         device_list_parameters = os.environ["DEVICE_LIST_PARAMETERS"]
-        cloudname = os.environ["CLOUDNAME"]
+        cloudname = os.environ["cloudName"]
         current_time = datetime.now().strftime("%c")
         title = (
             cloudname.upper()
@@ -2369,12 +2371,10 @@ def prepare_html(user_html, table3, day):
     						if (table.rows[i].cells[available_column_number].innerHTML == "Available") {{
                                 for(j = 0; j < table.rows[0].cells.length; j++) {{
     								table.rows[i].cells[j].style.backgroundColor = '#e6fff0';
-                                        if(j=table.rows[0].cells.length){{
-                                                if (table.rows[i].cells[(table.rows[0].cells.length - 1)].innerHTML.indexOf("failed") > -1) {{
-                                                        table.rows[i].cells[j].style.color = '#660001';
-                                                        table.rows[i].cells[j].style.backgroundColor = '#FFC2B5';
-                                                }}
-    							}}
+                                        if (table.rows[i].cells[(table.rows[0].cells.length - 1)].innerHTML.indexOf("failed") > -1) {{
+                                                table.rows[i].cells[j].style.color = '#660001';
+                                                table.rows[i].cells[j].style.backgroundColor = '#FFC2B5';
+                                        }}
                                  }}
     							var txt = table.rows[i].cells[device_id_column_number].innerHTML;
     							var url = 'https://"""
@@ -2938,6 +2938,7 @@ def main():
             "--cloud_name",
             metavar="cloud_name",
             help="Perfecto cloud name. (E.g. demo)",
+            nargs="?",
         )
         parser.add_argument(
             "-s",
@@ -2945,6 +2946,7 @@ def main():
             metavar="security_token",
             type=str,
             help="Perfecto Security Token/ Pass your Perfecto's username and password in user:password format",
+            nargs="?",
         )
         parser.add_argument(
             "-d",
@@ -3019,20 +3021,24 @@ def main():
             nargs="?",
         )
         args = vars(parser.parse_args())
-        if not args["cloud_name"]:
-            parser.print_help()
-            parser.error(
-                "cloud_name parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoai -c demo"
-            )
-            exit
-        if not args["security_token"]:
-            parser.print_help()
-            parser.error(
-                "security_token parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoai -c demo -s <<TOKEN>> || perfectoai -c demo -s <<user>>:<<password>>"
-            )
-            exit
-        os.environ["CLOUDNAME"] = args["cloud_name"]
-        os.environ["TOKEN"] = args["security_token"]
+        try:
+            print("Loading cloudName: " + os.environ["cloudName"] + " from environment variable.")
+        except Exception:
+            if not args["cloud_name"]:
+                parser.error(
+                    "cloud_name parameter is empty. Either Pass the argument -c followed by cloud_name, eg. perfectoai -c demo or add it as a cloudName environment variable"
+                )
+                exit
+            os.environ["cloudName"] = args["cloud_name"]
+        try:
+            print("Loading securityToken: " + os.environ["securityToken"] + " from environment variable.")
+        except Exception:
+            if not args["security_token"]:
+                parser.error(
+                    "security_token parameter is empty. Pass the argument -c followed by cloud_name, eg. perfectoai -c demo -s <<TOKEN>> || perfectoai -c demo -s <<user>>:<<password>> or add it as a securityToken environment variable"
+                )
+                exit
+            os.environ["securityToken"] = args["security_token"]
         if args["email"]:
             os.environ["bgcolor"] = "beige"
             if args["bgcolor"]:
@@ -3070,6 +3076,7 @@ def main():
                 ci_jenkins_url = ""
                 ci_username = ""
                 ci_token = ""
+                recommendations_count = 5
                 report_array = email_report.split("|")
                 for item in report_array:
                     if "report" in item:
@@ -3144,6 +3151,10 @@ def main():
                             ci_token, criteria = get_report_details(
                             item, temp, "ci_token", criteria
                         )
+                    if "recommendations" in item:
+                            recommendations_count, criteria = get_report_details(
+                            item, temp, "recommendations", criteria
+                        )
             except Exception as e:
                 raise Exception(
                     "Verify parameters of report, split them by | seperator/ " + str(e)
@@ -3165,6 +3176,7 @@ def main():
             os.environ["ci_username"] = ci_username
             os.environ["ci_token"] = ""
             os.environ["ci_token"] = ci_token
+            os.environ["recommendations"] = str(recommendations_count)
             filelist = glob.glob(os.path.join("*." + xlformat))
             for f in filelist:
                 os.remove(f)
@@ -3177,7 +3189,8 @@ def main():
 
             graphs, interactive_graphs, df = prepareReport(jobName, jobNumber, reportTag)
             if not jobName:
-                criteria = "start: " + startDate + ", end: " + endDate
+                if not reportTag:
+                    criteria = "start: " + startDate + ", end: " + endDate
             else:
                 criteria += jobName
             if jobNumber != "":
@@ -3304,7 +3317,7 @@ def main():
             blockedCount = blocked.shape[0]
             # failures count
             failuresmessage = []
-            failureListFileName = os.environ["CLOUDNAME"] + "_failures" +'.txt'
+            failureListFileName = os.environ["cloudName"] + "_failures" +'.txt'
             print("transfering all failure reasons to: %s" % (os.path.join(os.path.abspath(os.curdir), failureListFileName)))
             open(failureListFileName, 'w').close
             if len(failed_blocked) > 0:
@@ -3327,7 +3340,7 @@ def main():
                         if re.search(orchestrationIssue, commonError):
                             orchestrationIssuesCount += commonErrorCount
                             break
-                    error = commonError
+                    error = str(commonError)
                     regex = ""
                     if os.environ["regex"] != "":
                         regex = "|" + os.environ["regex"]
@@ -3356,10 +3369,10 @@ def main():
             # Top 5 failure reasons
             topFailureDict = {}
             failureDict = Counter(cleanedFailureList)
-            count_total = 5
+            count_total = int(str(os.environ["recommendations"]))
             for commonError, commonErrorCount in failureDict.most_common(count_total):
                 topFailureDict[commonError] = int(commonErrorCount)
-
+            suggesstionsDict = {}
             # reach top errors and clean them
             i = 0
             for commonError, commonErrorCount in topFailureDict.items():
@@ -3384,10 +3397,10 @@ def main():
                 else:
                     error = (
                         "Fix the error: *|*"
-                        + commonError.strip() + "*|*"
+                        + unicodedata.normalize("NFKD", str(commonError.strip()))  + "*|*"
                     )
-                report_link = df.loc[df['message'].str.startswith(commonError.strip(), na=False), "reportURL"].iloc[0]
-                suggesstionsDict[error] = [str(commonErrorCount), report_link]
+                report_link = df.loc[df['message'].str.startswith(str(commonError.strip()) , na=False), "reportURL"].iloc[0]
+                suggesstionsDict[error] = [int(commonErrorCount), report_link]
             eDict = edict(
                 {
                     "status": [
@@ -3416,14 +3429,16 @@ def main():
                         },
                     ],
                     "recommendation": [
-                        { "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": 1, "impact": "0"},
-                        { "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": 2, "impact": "0",},
-                        { "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": 3, "impact": "0",},
-                        { "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": 4, "impact": "0",},
-                        { "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": 5, "impact": "0",},
                     ],
                 }
             )
+            recommendations_count = int(str(os.environ["recommendations"]))
+            i = 0
+            dynamic_rec = []
+            while i < recommendations_count:
+                dynamic_rec.append({ "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": i+1, "impact": "0"})
+                i += 1
+            eDict['recommendation'] = dynamic_rec
             jsonObj = edict(eDict)
             if float(percentageCalculator(totalUnknownCount, totalTCCount)) >= 30:
                 suggesstionsDict[
@@ -3440,7 +3455,7 @@ def main():
                     for tcName, status in topfailedTCNames.itertuples(index=False):
                         suggesstionsDict[
                             "# Fix the top failing tests listed under 'Top Failed Tests' "
-                        ] = ['1',"-"]
+                        ] = [1,"-"]
                         break
 
             if len(suggesstionsDict) < count_total:
@@ -3450,7 +3465,7 @@ def main():
                             "# Fix the failures. The total failures % is too high (%) : "
                             + str(percentageCalculator(totalFailCount, totalTCCount))
                             + "%"
-                        ] = [str(percentageCalculator(totalFailCount, totalTCCount)), "-"]
+                        ] = [int(percentageCalculator(totalFailCount, totalTCCount)), "-"]
             if len(suggesstionsDict) < count_total:
                 if float(percentageCalculator(totalPassCount, totalTCCount)) < 80 and (
                     totalTCCount > 0
@@ -3459,7 +3474,7 @@ def main():
                         "# Fix the failures. The total pass %  is too less (%) : "
                         + str(int(percentageCalculator(totalPassCount, totalTCCount)))
                         + "%"
-                    ] = [str(
+                    ] = [int(
                         (100
                         - (
                             percentageCalculator(
@@ -3472,39 +3487,39 @@ def main():
                 if totalTCCount == 0:
                     suggesstionsDict[
                         "# There are no executions for today. Try Continuous Integration with any tools like Jenkins and schedule your jobs today. Please reach out to Professional Services team of Perfecto for any assistance :) !"
-                    ] = [str('100'),"-"]
+                    ] = [100,"-"]
                 elif int(percentageCalculator(totalPassCount, totalTCCount)) > 80:
                     print(str(int(percentageCalculator(totalPassCount, totalTCCount))))
-                    suggesstionsDict["# Great automation progress. Keep it up!"] = [str('0'), "-"]
+                    suggesstionsDict["# Great automation progress. Keep it up!"] = [0, "-"]
 
                 int(percentageCalculator(totalFailCount, totalTCCount)) > 15
-            topSuggesstionsDict = Counter(suggesstionsDict)
             counter = 0
             totalImpact = 0
-            print(str(topSuggesstionsDict))
-            for sugg, commonErrorCount in topSuggesstionsDict.most_common(count_total):
+            for sugg, commonErrorCount in sorted(suggesstionsDict.items(), key = lambda x:(x[1],x[0]), reverse=True)[:count_total]:
                 impact = 1
-                if sugg.startswith("# "):
-                    jsonObj.recommendation[counter].ReportURL =  '-'
-                    sugg = sugg.replace("# ", "")
-                    impact = str(int(float(str(commonErrorCount[0]))))
-                    jsonObj.recommendation[counter].Occurences = "-"
-                else:
-                    jsonObj.recommendation[counter].Occurences =  int(float(str(commonErrorCount[0])))
-                    jsonObj.recommendation[counter].ReportURL =  '<a target="_blank" href="' + commonErrorCount[1] + '">link</a>'
-                    impact = str(percentageCalculator(
-                        totalPassCount + int(float(str(commonErrorCount[0]))), totalTCCount
-                    ) - percentageCalculator(totalPassCount, totalTCCount))
-                jsonObj.recommendation[counter].impact = (
-                    str(("%.2f" % round(int(float(str(impact))), 2))) + "%"
-                )
-                jsonObj.recommendation[counter].Recommendations = html.escape(
-                    sugg.replace("*|*", "'")
-                    .replace("{", "{{")
-                    .replace("}", "}}")
-                    .strip()
-                )
-                totalImpact += round(int(float(str(impact))), 2)
+                print(sugg)
+                if str(sugg) != "" and str(commonErrorCount[0]) !="":
+                    if sugg.startswith("# "):
+                        jsonObj.recommendation[counter].ReportURL =  '-'
+                        sugg = sugg.replace("# ", "")
+                        impact = str(int(float(str(commonErrorCount[0]))))
+                        jsonObj.recommendation[counter].Occurences = "-"
+                    else:
+                        jsonObj.recommendation[counter].Occurences =  int(float(str(commonErrorCount[0])))
+                        jsonObj.recommendation[counter].ReportURL =  '<a target="_blank" href="' + commonErrorCount[1] + '">link</a>'
+                        impact = str(percentageCalculator(
+                            totalPassCount + int(float(str(commonErrorCount[0]))), totalTCCount
+                        ) - percentageCalculator(totalPassCount, totalTCCount))
+                    jsonObj.recommendation[counter].impact = (
+                        str(("%.2f" % round(int(float(str(impact))), 2))) + "%"
+                    )
+                    jsonObj.recommendation[counter].Recommendations = html.escape(
+                        sugg.replace("*|*", "'")
+                        .replace("{", "{{")
+                        .replace("}", "}}")
+                        .strip()
+                    )
+                    totalImpact += round(int(float(str(impact))), 2)
                 counter += 1
             global execution_status
             execution_status = pandas.DataFrame.from_dict(jsonObj.status)
@@ -3528,6 +3543,7 @@ def main():
             issues = style_df_email(issues)
             global recommendations
             recommendations = pandas.DataFrame.from_dict(jsonObj.recommendation)
+            # recommendations = recommendations.sort_values(['impact'], ascending=False)
             if totalImpact > 100:
                 recommendations.columns = [
                     "Recommendations",

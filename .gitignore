@@ -52,3 +52,4 @@ perfecto/ori.csv
 *.xlsx
 *output.txt
 app.py
+dev.md
