@@ -14,7 +14,7 @@ with open("README.md", "r") as fh:
 setup(
      name='perfectoai',
     #  version='1.0.0', #testpypi
-     version='1.0.11',
+     version='1.0.13',
      author="Genesis Thomas",
      author_email="gthomas@perforce.com",
      description="perfectoAI is an automated emailable reporter along with AI graphs & predictions",
@@ -24,7 +24,7 @@ setup(
      keywords = ['Perfecto', 'appium', 'selenium', 'testing', 'api', 'automation'],
      url="https://github.com/genesisthomas/PerfectoAI.git",
      install_requires=[
-            'jenkinsapi','requests','configparser','termcolor','numpy','cython','pandas','retrying','ephem','pymeeus','easydict','korean-lunar-calendar','MarkupSafe','jinja2','matplotlib', 'colorama','LunarCalendar','holidays','cmdstanpy','convertdate','openpyxl','wheel','pystan','xlrd','jinja2','tzlocal','plotly','fbprophet'
+            'json2html','jenkinsapi','requests','configparser','termcolor','numpy','cython','pandas','retrying','ephem','pymeeus','easydict','korean-lunar-calendar','MarkupSafe','jinja2','matplotlib', 'colorama','LunarCalendar','holidays','cmdstanpy','convertdate','openpyxl','wheel','pystan','xlrd','jinja2','tzlocal','plotly','fbprophet'
       ],
      packages=find_packages(),
      include_package_data=True,

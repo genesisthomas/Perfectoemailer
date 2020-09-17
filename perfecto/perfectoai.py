@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+from json2html import *
 import collections
+from re import MULTILINE
 import urllib.request, urllib.parse, urllib.error
 import time
 import unicodedata
@@ -83,6 +85,7 @@ failurereasons = {}
 issues = {}
 topfailedtable = {}
 monthlyStats = {}
+title = ""
 execution_summary = {}
 recommendations = {}
 execution_status = {}
@@ -2011,11 +2014,177 @@ def get_style():
 
 
 """
+ get failure html string 
+"""
+
+def get_failure_html_string(table):
+    bg = os.environ["bgcolor"]
+    string = (
+        """
+        <html lang="en">
+       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+            <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    		     <head><title aria-label="Report">"""
+        + str(os.environ["cloudName"]).upper() 
+        + """ Failures List</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+            </head>
+        <body style="background-color:"""
+            + bg
+            + """;">
+        <style>
+        .reportDiv {
+                    overflow-x: auto;
+                    text-align: center;
+        }
+        .mystyle {
+            font-size: 12pt;
+            font-family: "Trebuchet MS", Helvetica, sans-serif;
+            border-collapse: collapse;
+            border: 2px solid black;
+            margin: auto;
+            box-shadow: 0 0 80px rgba(2, 112, 0, 0.4);
+            background-color: #fffffa;
+            margin: 3%;
+        }
+        
+        .mystyle body {
+            font-family: "Trebuchet MS", Helvetica, sans-serif;
+            table-layout: auto;
+            position: relative;
+        }
+        
+        .mystyle table {
+            table-layout: auto;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-collapse: collapse;
+        }
+        
+        tr:hover {
+            background-color: rgba(190, 240, 196, 0.863);
+        }
+        
+        .mystyle td {
+            box-sizing: border-box;
+            font-size: 12px;
+            position: relative;
+            padding: 5px;
+            width: 10%;
+            color: black;
+            border-left: 1px solid #333;
+            border-right: 1px solid #333;
+            background: rgba(255, 253, 207, 0.58);
+        }
+        
+        .mystyle tr {
+            text-align: center;
+        }
+        .mystyle thead {
+            box-sizing: border-box;
+            background: tan;
+            color: black;
+            font-size: 14px;
+            position: relative;
+            border: 1px solid black;
+        }
+        
+        .mystyle th {
+            box-sizing: border-box;
+            line-height: 200%;
+            font-size: 14px;
+            background: tan;
+            font-weight: bold;
+            color: black;
+            text-align: center;
+            transition: transform 0.25s ease;
+        }
+        
+        table.mystyle>tbody>tr>td:nth-of-type(1) {
+            width: .5%;
+            text-align: center;
+        }
+        
+        table.mystyle>tbody>tr>td:nth-of-type(2) {
+            width: 5%;
+            text-align: left;
+        }
+        
+        table.mystyle>tbody>tr>td:nth-of-type(3) {
+            width: 10%;
+            text-align: left;
+        }
+        table.mystyle>tbody>tr>td:nth-of-type(5) {
+            width: 1%;
+        }
+        table.mystyle>tbody>tr>td:nth-of-type(6) {
+            width: .5%;
+        }
+        table.mystyle>tbody>tr>td:nth-of-type(7) {
+            width: .6%;
+        }
+    </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    var table = document.getElementById("itable");
+                    var rowCount = table.rows.length;
+                    for (var i = 0; i < rowCount; i++) {
+                        if (i >= 1) {
+                            tcNameColumn = 1;
+                            reportLink = 3;
+                            var txt = table.rows[i].cells[tcNameColumn].innerHTML;
+                            var url = table.rows[i].cells[reportLink].innerHTML;
+                            var row = $('<tr></tr>')
+                            var link = document.createElement("a");
+                            link.href = url;
+                            link.innerHTML = txt;
+                            link.target = "_blank";
+                            table.rows[i].cells[tcNameColumn].innerHTML = '';
+                            table.rows[i].cells[tcNameColumn].appendChild(link);
+                        }
+                    }
+                    $("table").find("tbody th").hide();
+                    $("#itable").find("th, td").filter(":nth-child(" + (reportLink + 1) + ")").hide();
+                    $("#search").on("keyup", debounce(function() {
+                        var value = $(this).val().toLowerCase();
+                        $("#itable tbody tr").filter(function() {
+                            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                        });
+                    }, 300));
+
+                    function debounce(func, wait, immediate) {
+                        var timeout;
+                        return function() {
+                            var context = this,
+                                args = arguments;
+                            var later = function() {
+                                timeout = null;
+                                if (!immediate) func.apply(context, args);
+                            };
+                            var callNow = immediate && !timeout;
+                            clearTimeout(timeout);
+                            timeout = setTimeout(later, wait);
+                            if (callNow) func.apply(context, args);
+                        };
+                    };
+                });
+            </script>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body>
+        <div class="reportDiv"><br>
+        <input id="search" aria-label="search" type="text" placeholder="Search/Filter..">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+        """+ table +  """ </div></body></html>""")
+    return str(string)
+
+"""
  get html string
 """
 
 
-def get_html_string(graphs):
+def get_html_string(graphs, tagrec, tagLinks):
     bg = os.environ["bgcolor"]
     string = (
         """
@@ -2032,10 +2201,13 @@ def get_html_string(graphs):
         + """;">
     """
         + get_style()
-        + """
-        <div id="nestle-section">
-        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["cloudName"]).upper() + """ Report</label><div class="tab-content1">
-        <div class="reportDiv"> """
+        + """<div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
+        """
+        + title +
+        """
+        </div><div id="nestle-section">
+        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["cloudName"]).upper() + """ Report</label>
+        <div class="tab-content1"> </p><div class="reportDiv"> """
         + execution_summary
         + """ alt='execution summary' id='reportDiv'> </img></br></div></div>"""
         + """<div class="reportDiv">"""
@@ -2046,7 +2218,9 @@ def get_html_string(graphs):
         + """ </div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Issues</label><div class="tab-content1">
           <div class="reportDiv">"""
         + issues
-        + """ </div></div><input type="radio" id="tab4" name="tabs" checked=""/><label for="tab4">Custom Failure Reasons</label><div class="tab-content1">
+        + """ <br><a href="./"""  + str(os.environ["cloudName"]) + """_failures.html" style="white-space:nowrap;text-decoration:none;background-color: rgb(195, 132, 49);color: white;padding: 8px 16px;font-family: sans-serif;border-radius: 3px;">All Failures</a>"""
+        + tagLinks
+        + """</p></div></div><input type="radio" id="tab4" name="tabs" checked=""/><label for="tab4">Custom Failure Reasons</label><div class="tab-content1">
           <div class="reportDiv">"""
         + failurereasons
         + """ </div></div><input type="radio" id="tab5" name="tabs" checked=""/><label for="tab5">Top Failed Tests</label><div class="tab-content1">
@@ -2055,7 +2229,7 @@ def get_html_string(graphs):
         + """ </div>
           </div><input type="radio" id="tab6" name="tabs" checked=""/><label for="tab6">Top Recommendations</label><div class="tab-content1">
           <div class="reportDiv">"""
-        + recommendations
+        + recommendations + tagrec
         + """ </div></div><div class="reportDiv">"""
         + "".join(graphs)
         + """</div></body>"""
@@ -2068,7 +2242,7 @@ def get_html_string(graphs):
 """
 
 
-def get_html_string_email(graphs):
+def get_html_string_email(graphs, tagrec):
     bg = os.environ["bgcolor"]
     header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
     tabcontent = (
@@ -2091,7 +2265,10 @@ def get_html_string_email(graphs):
     <body style="box-sizing: border-box; height: 100%; background-repeat: repeat-y; background-position: right; background-size: contain; background-attachment: initial; opacity: .93; background-color:"""
         + bg
         + """;">
-        <div """
+        """+ """<div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
+        """
+        + title +
+        """<div """
         + header
         + """><b><center>Summary Details</center></b></label></div><div class="tab-content1" """
         + tabcontent
@@ -2150,7 +2327,7 @@ def get_html_string_email(graphs):
         <div class="reportDiv" """
         + reportDiv
         + """>"""
-        + recommendations
+        + recommendations + tagrec
         + """ </div></div></div><br><div class="reportDiv">"""
         + "".join(graphs)
         + """</div><br></body>"""
@@ -2920,6 +3097,362 @@ def style_df_email(df):
         )
     )
 
+def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, blocked, name, bool):
+    labIssuesCount = 0
+    totalFailCount = 0
+    totalPassCount = 0
+    totalUnknownCount = 0
+    totalTCCount = 0
+    scriptingIssuesCount = 0
+    appCrashIssuesCount = 0
+    testDataIssuesCount = 0
+    environmentIssuesCount = 0
+    orchestrationIssuesCount = 0
+    cleanedFailureList = {}
+    # recommendations
+    totalFailCount = failed.shape[0]
+    totalPassCount = passed.shape[0]
+    blockedCount = blocked.shape[0]
+    # failures count
+    failuresmessage = []
+    failureListFileName = name + "_failures" +'.txt'
+    print("transfering all failure reasons to: %s" % (os.path.join(os.path.abspath(os.curdir), failureListFileName)))
+    open(failureListFileName, 'w').close
+    totalUnknownCount = df[(df["Test Status"] == "UNKNOWN")].shape[0]
+    totalTCCount = df.shape[0]
+    if len(failed_blocked) > 0:
+        failuresmessage = (
+            failed_blocked.groupby(["message"])
+            .size()
+            .reset_index(name="#Failed")
+            .sort_values("#Failed", ascending=False)
+        )
+            #Get all errors and links
+        i = 1
+        allFailuresResultLink = []
+        for error, count in failuresmessage.itertuples(index=False):
+            report_link = df.loc[df['message'].str.startswith(str(error.strip()) , na=False), "reportURL"].iloc[0]
+            testName = df.loc[df['reportURL'].str.startswith(str(report_link) , na=False), "name"].iloc[0]
+            job = df.loc[df['reportURL'].str.startswith(str(report_link) , na=False), "job/name"].iloc[0]
+            jobNumber = df.loc[df['reportURL'].str.startswith(str(report_link) , na=False), "job/number"].iloc[0]
+            owner = df.loc[df['reportURL'].str.startswith(str(report_link) , na=False), "owner"].iloc[0]
+            miniJson = {
+                "#": i,
+                "Test Name": testName,
+                "Error": error,
+                "link": report_link,
+                "Job Name": str(job),
+                "Job Number": str(jobNumber),
+                "Owner": str(owner),
+            }
+            allFailuresResultLink.append(miniJson)
+            i+=1
+        allFailuresResultLink = json.dumps(allFailuresResultLink)
+        output = json2html.convert(json = allFailuresResultLink)
+        file = open(name + '_failures.html', 'w') 
+        file.write(get_failure_html_string(str(output).replace('<table border="1">','<table class="dataframe mystyle" border="1" id="itable">')))
+        file.close() 
+
+        global labIssues
+        global orchestrationIssues
+        for commonError, commonErrorCount in failuresmessage.itertuples(
+            index=False
+        ):
+            for labIssue in labIssues:
+                if re.search(labIssue, commonError):
+                    labIssuesCount += commonErrorCount
+                    break
+            for orchestrationIssue in orchestrationIssues:
+                if re.search(orchestrationIssue, commonError):
+                    orchestrationIssuesCount += commonErrorCount
+                    break
+            error = str(commonError)
+            regex = ""
+            if os.environ["regex"] != "":
+                regex = "|" + os.environ["regex"]
+            regEx_Filter = "Build info:|For documentation on this error|at org.xframium.page|Scenario Steps:| at WebDriverError|\(Session info:|XCTestOutputBarrier\d+|\s\tat [A-Za-z]+.[A-Za-z]+.|View Hierarchy:|Got: |Stack Trace:|Report Link|at dalvik.system|Output:\nUsage|t.*Requesting snapshot of accessibility|\{ Error\:|at\sendReadableNT|at\sFunction|\sat\smakeRequest|at\sObject\.\_errnoException|\"stack\"\:|('|)\n.*Error\:\s|at\sRequest.callback|\n\s+at\s" + regex
+            if re.search(regEx_Filter, error, re.MULTILINE):
+                if re.search("('|)(\n|)AssertionError\:.*\n\s+at.*\n.*at", error, re.MULTILINE):
+                    error = "at".join(error.split("at", 2)[:2]).replace(r'\n','\n')
+
+                else:
+                    error = str(re.compile(regEx_Filter).split(error)[0])
+                    if "An error occurred. Stack Trace:" in error:
+                        error = error.split("An error occurred. Stack Trace:")[1]
+            if re.search("error: \-\[|Fatal error:", error):
+                error = str(
+                    re.compile("error: \-\[|Fatal error:").split(error)[1]
+                )
+            if error.strip() in cleanedFailureList:
+                cleanedFailureList[error.strip()] += 1
+            else:
+                cleanedFailureList[error.strip()] = commonErrorCount
+            appCrashIssuesCount =  len(df.loc[df['Custom Failure Reason'] == "Application crashed"])
+            environmentIssuesCount = len(df.loc[df['message'].str.startswith("Error: Request failed with", na=False)])
+            testDataIssuesCount = len(df.loc[df['message'].str.startswith("TEST_DATA_ERROR", na=False)])
+            scriptingIssuesCount = (totalFailCount + blockedCount) - (
+                orchestrationIssuesCount + labIssuesCount + appCrashIssuesCount + environmentIssuesCount + testDataIssuesCount
+            )
+            with open(failureListFileName, "a", encoding="utf-8") as myfile:
+                myfile.write(str(error.strip())+'\n*******************************************\n')
+    
+    # Top 5 failure reasons
+    topFailureDict = {}
+    failureDict = Counter(cleanedFailureList)
+    count_total = int(str(os.environ["recommendations"]))
+    for commonError, commonErrorCount in failureDict.most_common(count_total):
+        topFailureDict[commonError] = int(commonErrorCount)
+    suggesstionsDict = {}
+    # reach top errors and clean them
+    i = 0
+    for commonError, commonErrorCount in topFailureDict.items():
+        if "ERROR: No device was found" in commonError:
+            error = (
+                "Raise a support case for the error: *|*"
+                + commonError.strip() + "*|*"
+            )
+        elif "Cannot open device" in commonError:
+            error = (
+                "Reserve the device/ use perfecto lab auto selection feature to avoid the error:  *|*"
+                + commonError.strip() + "*|*"
+            )
+        elif (
+            '(UnknownError) Failed to execute command button-text click: Needle not found for expected value: "Allow" (java.lang.RuntimeException)'
+            in commonError
+        ):
+            error = (
+                "Allow text/popup was not displayed as expected. It could be an environment issue as the error: *|*"
+                + commonError.strip() + "*|*"
+            )
+        else:
+            error = (unicodedata.normalize("NFKD", str(commonError.strip())))
+        report_link = df.loc[df['message'].str.startswith(str(commonError.strip()) , na=False), "reportURL"].iloc[0]
+        suggesstionsDict[error] = [int(commonErrorCount), report_link]
+    eDict = {}
+    eDict = edict(
+        {
+            "status": [
+                {
+                    "#Total": "Count ->",
+                    "#Executions": totalTCCount,
+                    "#Pass": totalPassCount,
+                    "#Failed": totalFailCount,
+                    "#Blocked": blockedCount,
+                    "#Unknowns": totalUnknownCount,
+                    "Overall Pass %": str(
+                        int(percentageCalculator(totalPassCount, totalTCCount))
+                    )
+                    + "%",
+                },
+            ],
+            "issues": [
+                {
+                    "#Issues": "Count ->",
+                    "#Scripting": scriptingIssuesCount,
+                    "#App Crash": appCrashIssuesCount,
+                    "#Environment Issues": environmentIssuesCount,
+                    "#Test Data Issues": testDataIssuesCount,
+                    "#Lab": labIssuesCount,
+                    "#Orchestration": orchestrationIssuesCount,
+                },
+            ],
+            "recommendation": [
+            ],
+        }
+    )
+    recommendations_count = int(str(os.environ["recommendations"]))
+    i = 0
+    dynamic_rec = []
+    while i < recommendations_count:
+        dynamic_rec.append({ "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": i+1, "impact": "0"})
+        i += 1
+    eDict['recommendation'] = dynamic_rec
+    jsonObj = edict(eDict)
+    
+    if(bool):
+        if float(percentageCalculator(totalUnknownCount, totalTCCount)) >= 30:
+            suggesstionsDict[
+                "# Fix the unknowns. The unknown script ratio is too high (%) : "
+                + str(percentageCalculator(totalUnknownCount, totalTCCount))
+                + "%"
+            ] = [percentageCalculator(
+                totalPassCount + totalUnknownCount, totalTCCount
+            ) - percentageCalculator(
+                totalPassCount, totalTCCount
+            ), "-"]
+        if len(suggesstionsDict) < count_total:
+            if (topfailedTCNames.shape[0]) > 1:
+                for tcName, status in topfailedTCNames.itertuples(index=False):
+                    suggesstionsDict[
+                        "# Fix the top failing tests listed under 'Top Failed Tests' "
+                    ] = [1,"-"]
+                    break
+
+        if len(suggesstionsDict) < count_total:
+            if int(percentageCalculator(totalFailCount, totalTCCount)) > 15:
+                if totalTCCount > 0:
+                    suggesstionsDict[
+                        "# Fix the failures. The total failures % is too high (%) : "
+                        + str(percentageCalculator(totalFailCount, totalTCCount))
+                        + "%"
+                    ] = [int(percentageCalculator(totalFailCount, totalTCCount)), "-"]
+        if len(suggesstionsDict) < count_total:
+            if float(percentageCalculator(totalPassCount, totalTCCount)) < 80 and (
+                totalTCCount > 0
+            ):
+                suggesstionsDict[
+                    "# Fix the failures. The total pass %  is too less (%) : "
+                    + str(int(percentageCalculator(totalPassCount, totalTCCount)))
+                    + "%"
+                ] = [int(
+                    (100
+                    - (
+                        percentageCalculator(
+                            totalPassCount + totalUnknownCount, totalTCCount
+                        )
+                        - percentageCalculator(totalPassCount, totalTCCount)
+                    )
+                ) - int(percentageCalculator(totalPassCount, totalTCCount))),"-"]
+    if len(suggesstionsDict) < count_total:
+        if totalTCCount == 0:
+            suggesstionsDict[
+                "# There are no executions for today. Try Continuous Integration with any tools like Jenkins and schedule your jobs today. Please reach out to Professional Services team of Perfecto for any assistance :) !"
+            ] = [100,"-"]
+        elif int(percentageCalculator(totalPassCount, totalTCCount)) > 80:
+            print(str(int(percentageCalculator(totalPassCount, totalTCCount))))
+            suggesstionsDict["# Great automation progress. Keep it up!"] = [0, "-"]
+
+        int(percentageCalculator(totalFailCount, totalTCCount)) > 15
+    counter = 0
+    totalImpact = 0
+    for sugg, commonErrorCount in sorted(suggesstionsDict.items(), key = lambda x:(x[1],x[0]), reverse=True)[:count_total]:
+        impact = 1
+        if str(sugg) != "" and str(commonErrorCount[0]) !="":
+            if sugg.startswith("# "):
+                jsonObj.recommendation[counter].ReportURL =  '-'
+                sugg = sugg.replace("# ", "")
+                impact = str(int(float(str(commonErrorCount[0]))))
+                jsonObj.recommendation[counter].Occurences = "-"
+            else:
+                jsonObj.recommendation[counter].Occurences =  int(float(str(commonErrorCount[0])))
+                jsonObj.recommendation[counter].ReportURL =  '<a target="_blank" href="' + commonErrorCount[1] + '">link</a>'
+                impact = str(percentageCalculator(
+                    totalPassCount + int(float(str(commonErrorCount[0]))), totalTCCount
+                ) - percentageCalculator(totalPassCount, totalTCCount))
+            jsonObj.recommendation[counter].impact = (
+                str(("%.2f" % round(int(float(str(impact))), 2))) + "%"
+            )
+            jsonObj.recommendation[counter].Recommendations = html.escape(
+                sugg.replace("*|*", "'")
+                .replace("{", "{{")
+                .replace("}", "}}")
+                .strip()
+            )
+            totalImpact += round(int(float(str(impact))), 2)
+        counter += 1
+    global execution_status
+    execution_status = pandas.DataFrame.from_dict(jsonObj.status)
+    execution_status = execution_status.to_html(
+        classes="mystyle",
+        table_id="report",
+        index=False,
+        render_links=True,
+        escape=False,
+    )
+    execution_status = style_df_email(execution_status)
+    global issues
+    issues = pandas.DataFrame.from_dict(jsonObj.issues)
+    issues = issues.to_html(
+        classes="mystyle",
+        table_id="report",
+        index=False,
+        render_links=True,
+        escape=False,
+    )
+    issues = style_df_email(issues)
+    recommendations = pandas.DataFrame.from_dict(jsonObj.recommendation)
+    # recommendations = recommendations.sort_values(['impact'], ascending=False)
+    if totalImpact > 100:
+        recommendations.columns = [
+            "Issues",
+            "Occurences",
+            "ReportURL",
+            "Rank",
+            "Pass% Increase",
+        ]
+    else:
+        recommendations.columns = [
+            "Issues",
+            "Occurences",
+            "ReportURL",
+            "Rank",
+            "Pass% Increase - " + str(round(totalImpact, 2)) + "%",
+        ]
+    recommendations = recommendations[
+        recommendations.Issues.astype(str) != "-"
+    ]
+    recommendations = recommendations.to_html(
+        classes="mystyle",
+        table_id="report",
+        index=False,
+        render_links=True,
+        escape=False,
+    )
+    return style_df_email(recommendations)
+
+        
+def process_failures(df, failed_blocked, topfailedTCNames, graphs, interactive_graphs, failed, passed, blocked):
+    
+    global recommendations
+    recommendations = get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, blocked, str(os.environ["cloudName"]), True)
+    
+    tags_cols = [col for col in df.columns if 'tags' in col]
+    recommend_tag = os.environ["recommend_tag"]
+    tagrec = ""
+    tagLinks = ""
+    if recommend_tag != "":
+        for i, tag in enumerate(recommend_tag.split(";")):
+            query = '' 
+            for i, col in enumerate(tags_cols):
+                query += '`' + col + "` == '" + tag + "'"
+                if(i != (len(tags_cols) - 1)):
+                    query += ' or '
+            tag_df = df.query(query)
+            tagrec += """ <br><div style="padding:1px 0; background-color:darkkhaki; color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointer;">
+                        """+ tag + """ Recommendations
+                </div>"""
+            tagrec += get_recommendations(df, tag_df, topfailedTCNames, failed, passed, blocked, str(tag), False)
+            tagLinks += """ &nbsp; <a href="./"""  + str(tag) + """_failures.html" style="white-space:nowrap;text-decoration:none;background-color: rgb(195, 132, 49);color: white;padding: 8px 16px;font-family: sans-serif;border-radius: 3px;">"""  + str(tag) + """ Failures</a>"""
+            
+    #prepares graphs & interactive graphs
+    with open(email_report_filename, "a") as f:
+        f.write(
+            get_html_string_email(graphs, tagrec).format(
+                table=df.to_html(
+                    classes="mystyle",
+                    table_id="report",
+                    index=False,
+                    render_links=True,
+                    escape=False,
+                )
+            )
+        )
+    graphs.clear()
+    with open(live_report_filename, "a") as f:
+        f.write(
+            get_html_string(graphs, tagrec, tagLinks).format(
+                table=df.to_html(
+                    classes="mystyle",
+                    table_id="report",
+                    index=False,
+                    render_links=True,
+                    escape=False,
+                )
+            )
+        )
+    with open(live_report_filename, "a") as f:
+        f.write(''.join(interactive_graphs)
+        )       
 
 def main():
     """
@@ -3052,16 +3585,7 @@ def main():
             if args["bgcolor"]:
                 os.environ["bgcolor"] = args["bgcolor"]
             email_report = args["email"]
-            labIssuesCount = 0
-            totalFailCount = 0
-            totalPassCount = 0
-            totalUnknownCount = 0
-            totalTCCount = 0
-            scriptingIssuesCount = 0
-            appCrashIssuesCount = 0
-            testDataIssuesCount = 0
-            environmentIssuesCount = 0
-            orchestrationIssuesCount = 0
+
             try:
                 global criteria
                 global jobNumber
@@ -3074,6 +3598,7 @@ def main():
                 global tags
                 global reportTag
                 global live_report_filename
+                global recommend_tag
                 consolidate = ""
                 xlformat = "csv"
                 port = ""
@@ -3085,6 +3610,7 @@ def main():
                 ci_username = ""
                 ci_token = ""
                 recommendations_count = 5
+                recommend_tag = ""
                 report_array = email_report.split("|")
                 for item in report_array:
                     if "report" in item:
@@ -3163,6 +3689,10 @@ def main():
                             recommendations_count, criteria = get_report_details(
                             item, temp, "recommendations", criteria
                         )
+                    if "recommend_tag" in item:
+                                recommend_tag, criteria = get_report_details(
+                            item, temp, "recommend_tag", criteria
+                        )
             except Exception as e:
                 raise Exception(
                     "Verify parameters of report, split them by | seperator/ " + str(e)
@@ -3185,6 +3715,8 @@ def main():
             os.environ["ci_token"] = ""
             os.environ["ci_token"] = ci_token
             os.environ["recommendations"] = str(recommendations_count)
+            os.environ["recommend_tag"] = ""
+            os.environ["recommend_tag"] = str(recommend_tag)
             filelist = glob.glob(os.path.join("*." + xlformat))
             for f in filelist:
                 os.remove(f)
@@ -3198,11 +3730,11 @@ def main():
             graphs, interactive_graphs, df = prepareReport(jobName, jobNumber, reportTag)
             if not jobName:
                 if not reportTag:
-                    criteria = "start: " + startDate + ", end: " + endDate
+                    criteria = "Start: " + startDate + ", End: " + endDate
             else:
-                criteria += jobName
+                criteria += "Job: " + jobName.replace(";", "; ")
             if jobNumber != "":
-                criteria += " (Build Number: " + jobNumber
+                criteria += "<br> Build Number: " + jobNumber.replace(";", "; ")
             if os.environ["consolidate"] != "":
                 criteria += (
                     ", start: "
@@ -3211,26 +3743,24 @@ def main():
                     + str(df["startTime"].iloc[0]).split(" ", 1)[0]
                 )
             elif startDate != "":
-                criteria += " (start: " + startDate + ", end:" + endDate
+                criteria += " <br>Start: " + startDate + ", End:" + endDate
             global execution_summary
+            global title
             title = ""
             if tags != "":
-                title = report + criteria + ", " + tags + ")"
-            elif "(" in criteria:
-                title = report + criteria + ")"
+                title = report + criteria + "<br>Info: " + tags
             else:
                 title = report + criteria
             if reportTag != "":
-                title += " tags: " + reportTag
-            execution_summary = create_summary(df, title, "status", "device_summary",)
+                title += "<br> tags: " + reportTag
+            execution_summary = create_summary(df, "", "status", "device_summary",)
             failed = df[(df["status"] == "FAILED")]
             passed = df[(df["status"] == "PASSED")]
             blocked = df[(df["status"] == "BLOCKED")]
             failed_blocked = df[
                 (df["status"] == "FAILED") | (df["status"] == "BLOCKED")
             ]
-            totalUnknownCount = df[(df["status"] == "UNKNOWN")].shape[0]
-            totalTCCount = df.shape[0]
+            
             # monthly stats
             df["platforms/0/deviceType"] = df["platforms/0/deviceType"].fillna("Others")
             df["platforms/0/os"] = df["platforms/0/os"].fillna("Others")
@@ -3319,293 +3849,7 @@ def main():
                 escape=False,
             )
             topfailedtable = style_df_email(topfailedtable)
-            # recommendations
-            totalFailCount = failed.shape[0]
-            totalPassCount = passed.shape[0]
-            blockedCount = blocked.shape[0]
-            # failures count
-            failuresmessage = []
-            failureListFileName = os.environ["cloudName"] + "_failures" +'.txt'
-            print("transfering all failure reasons to: %s" % (os.path.join(os.path.abspath(os.curdir), failureListFileName)))
-            open(failureListFileName, 'w').close
-            if len(failed_blocked) > 0:
-                failuresmessage = (
-                    failed_blocked.groupby(["message"])
-                    .size()
-                    .reset_index(name="#Failed")
-                    .sort_values("#Failed", ascending=False)
-                )
-                global labIssues
-                global orchestrationIssues
-                for commonError, commonErrorCount in failuresmessage.itertuples(
-                    index=False
-                ):
-                    for labIssue in labIssues:
-                        if re.search(labIssue, commonError):
-                            labIssuesCount += commonErrorCount
-                            break
-                    for orchestrationIssue in orchestrationIssues:
-                        if re.search(orchestrationIssue, commonError):
-                            orchestrationIssuesCount += commonErrorCount
-                            break
-                    error = str(commonError)
-                    regex = ""
-                    if os.environ["regex"] != "":
-                        regex = "|" + os.environ["regex"]
-                    regEx_Filter = "Build info:|For documentation on this error|at org.xframium.page|Scenario Steps:| at WebDriverError|\(Session info:|XCTestOutputBarrier\d+|\s\tat [A-Za-z]+.[A-Za-z]+.|View Hierarchy:|Got: |Stack Trace:|Report Link|at dalvik.system|Output:\nUsage|t.*Requesting snapshot of accessibility|\{ Error\:|at\sendReadableNT|at\sFunction|\sat\smakeRequest|at\sObject\.\_errnoException|\"stack\"\:|('|)\n.*Error\:\s|at\sRequest.callback|\n\s+at\s" + regex
-                    if re.search(regEx_Filter, error):
-                        error = str(re.compile(regEx_Filter).split(error)[0])
-                        if "An error occurred. Stack Trace:" in error:
-                            error = error.split("An error occurred. Stack Trace:")[1]
-                    if re.search("error: \-\[|Fatal error:", error):
-                        error = str(
-                            re.compile("error: \-\[|Fatal error:").split(error)[1]
-                        )
-                    if error.strip() in cleanedFailureList:
-                        cleanedFailureList[error.strip()] += 1
-                    else:
-                        cleanedFailureList[error.strip()] = commonErrorCount
-                    appCrashIssuesCount =  len(df.loc[df['Custom Failure Reason'] == "Application crashed"])
-                    environmentIssuesCount = len(df.loc[df['message'].str.startswith("Error: Request failed with", na=False)])
-                    testDataIssuesCount = len(df.loc[df['message'].str.startswith("TEST_DATA_ERROR", na=False)])
-                    scriptingIssuesCount = (totalFailCount + blockedCount) - (
-                        orchestrationIssuesCount + labIssuesCount + appCrashIssuesCount + environmentIssuesCount + testDataIssuesCount
-                    )
-                    with open(failureListFileName, "a", encoding="utf-8") as myfile:
-                        myfile.write(str(error.strip())+'\n*******************************************\n')
-            
-            # Top 5 failure reasons
-            topFailureDict = {}
-            failureDict = Counter(cleanedFailureList)
-            count_total = int(str(os.environ["recommendations"]))
-            for commonError, commonErrorCount in failureDict.most_common(count_total):
-                topFailureDict[commonError] = int(commonErrorCount)
-            suggesstionsDict = {}
-            # reach top errors and clean them
-            i = 0
-            for commonError, commonErrorCount in topFailureDict.items():
-                if "ERROR: No device was found" in commonError:
-                    error = (
-                        "Raise a support case for the error: *|*"
-                        + commonError.strip() + "*|*"
-                    )
-                elif "Cannot open device" in commonError:
-                    error = (
-                        "Reserve the device/ use perfecto lab auto selection feature to avoid the error:  *|*"
-                        + commonError.strip() + "*|*"
-                    )
-                elif (
-                    '(UnknownError) Failed to execute command button-text click: Needle not found for expected value: "Allow" (java.lang.RuntimeException)'
-                    in commonError
-                ):
-                    error = (
-                        "Allow text/popup was not displayed as expected. It could be an environment issue as the error: *|*"
-                        + commonError.strip() + "*|*"
-                    )
-                else:
-                    error = (
-                        "Fix the error: *|*"
-                        + unicodedata.normalize("NFKD", str(commonError.strip()))  + "*|*"
-                    )
-                report_link = df.loc[df['message'].str.startswith(str(commonError.strip()) , na=False), "reportURL"].iloc[0]
-                suggesstionsDict[error] = [int(commonErrorCount), report_link]
-            eDict = edict(
-                {
-                    "status": [
-                        {
-                            "#Total": "Count ->",
-                            "#Executions": totalTCCount,
-                            "#Pass": totalPassCount,
-                            "#Failed": totalFailCount,
-                            "#Blocked": blockedCount,
-                            "#Unknowns": totalUnknownCount,
-                            "Overall Pass %": str(
-                                int(percentageCalculator(totalPassCount, totalTCCount))
-                            )
-                            + "%",
-                        },
-                    ],
-                    "issues": [
-                        {
-                            "#Issues": "Count ->",
-                            "#Scripting": scriptingIssuesCount,
-                            "#App Crash": appCrashIssuesCount,
-                            "#Environment Issues": environmentIssuesCount,
-                            "#Test Data Issues": testDataIssuesCount,
-                            "#Lab": labIssuesCount,
-                            "#Orchestration": orchestrationIssuesCount,
-                        },
-                    ],
-                    "recommendation": [
-                    ],
-                }
-            )
-            recommendations_count = int(str(os.environ["recommendations"]))
-            i = 0
-            dynamic_rec = []
-            while i < recommendations_count:
-                dynamic_rec.append({ "Recommendations": "-", "Occurences":"-", "ReportURL":"-", "Rank": i+1, "impact": "0"})
-                i += 1
-            eDict['recommendation'] = dynamic_rec
-            jsonObj = edict(eDict)
-            if float(percentageCalculator(totalUnknownCount, totalTCCount)) >= 30:
-                suggesstionsDict[
-                    "# Fix the unknowns. The unknown script ratio is too high (%) : "
-                    + str(percentageCalculator(totalUnknownCount, totalTCCount))
-                    + "%"
-                ] = [percentageCalculator(
-                    totalPassCount + totalUnknownCount, totalTCCount
-                ) - percentageCalculator(
-                    totalPassCount, totalTCCount
-                ), "-"]
-            if len(suggesstionsDict) < count_total:
-                if (topfailedTCNames.shape[0]) > 1:
-                    for tcName, status in topfailedTCNames.itertuples(index=False):
-                        suggesstionsDict[
-                            "# Fix the top failing tests listed under 'Top Failed Tests' "
-                        ] = [1,"-"]
-                        break
-
-            if len(suggesstionsDict) < count_total:
-                if int(percentageCalculator(totalFailCount, totalTCCount)) > 15:
-                    if totalTCCount > 0:
-                        suggesstionsDict[
-                            "# Fix the failures. The total failures % is too high (%) : "
-                            + str(percentageCalculator(totalFailCount, totalTCCount))
-                            + "%"
-                        ] = [int(percentageCalculator(totalFailCount, totalTCCount)), "-"]
-            if len(suggesstionsDict) < count_total:
-                if float(percentageCalculator(totalPassCount, totalTCCount)) < 80 and (
-                    totalTCCount > 0
-                ):
-                    suggesstionsDict[
-                        "# Fix the failures. The total pass %  is too less (%) : "
-                        + str(int(percentageCalculator(totalPassCount, totalTCCount)))
-                        + "%"
-                    ] = [int(
-                        (100
-                        - (
-                            percentageCalculator(
-                                totalPassCount + totalUnknownCount, totalTCCount
-                            )
-                            - percentageCalculator(totalPassCount, totalTCCount)
-                        )
-                    ) - int(percentageCalculator(totalPassCount, totalTCCount))),"-"]
-            if len(suggesstionsDict) < count_total:
-                if totalTCCount == 0:
-                    suggesstionsDict[
-                        "# There are no executions for today. Try Continuous Integration with any tools like Jenkins and schedule your jobs today. Please reach out to Professional Services team of Perfecto for any assistance :) !"
-                    ] = [100,"-"]
-                elif int(percentageCalculator(totalPassCount, totalTCCount)) > 80:
-                    print(str(int(percentageCalculator(totalPassCount, totalTCCount))))
-                    suggesstionsDict["# Great automation progress. Keep it up!"] = [0, "-"]
-
-                int(percentageCalculator(totalFailCount, totalTCCount)) > 15
-            counter = 0
-            totalImpact = 0
-            for sugg, commonErrorCount in sorted(suggesstionsDict.items(), key = lambda x:(x[1],x[0]), reverse=True)[:count_total]:
-                impact = 1
-                if str(sugg) != "" and str(commonErrorCount[0]) !="":
-                    if sugg.startswith("# "):
-                        jsonObj.recommendation[counter].ReportURL =  '-'
-                        sugg = sugg.replace("# ", "")
-                        impact = str(int(float(str(commonErrorCount[0]))))
-                        jsonObj.recommendation[counter].Occurences = "-"
-                    else:
-                        jsonObj.recommendation[counter].Occurences =  int(float(str(commonErrorCount[0])))
-                        jsonObj.recommendation[counter].ReportURL =  '<a target="_blank" href="' + commonErrorCount[1] + '">link</a>'
-                        impact = str(percentageCalculator(
-                            totalPassCount + int(float(str(commonErrorCount[0]))), totalTCCount
-                        ) - percentageCalculator(totalPassCount, totalTCCount))
-                    jsonObj.recommendation[counter].impact = (
-                        str(("%.2f" % round(int(float(str(impact))), 2))) + "%"
-                    )
-                    jsonObj.recommendation[counter].Recommendations = html.escape(
-                        sugg.replace("*|*", "'")
-                        .replace("{", "{{")
-                        .replace("}", "}}")
-                        .strip()
-                    )
-                    totalImpact += round(int(float(str(impact))), 2)
-                counter += 1
-            global execution_status
-            execution_status = pandas.DataFrame.from_dict(jsonObj.status)
-            execution_status = execution_status.to_html(
-                classes="mystyle",
-                table_id="report",
-                index=False,
-                render_links=True,
-                escape=False,
-            )
-            execution_status = style_df_email(execution_status)
-            global issues
-            issues = pandas.DataFrame.from_dict(jsonObj.issues)
-            issues = issues.to_html(
-                classes="mystyle",
-                table_id="report",
-                index=False,
-                render_links=True,
-                escape=False,
-            )
-            issues = style_df_email(issues)
-            global recommendations
-            recommendations = pandas.DataFrame.from_dict(jsonObj.recommendation)
-            # recommendations = recommendations.sort_values(['impact'], ascending=False)
-            if totalImpact > 100:
-                recommendations.columns = [
-                    "Recommendations",
-                    "Occurences",
-                    "ReportURL",
-                    "Rank",
-                    "Pass% Increase",
-                ]
-            else:
-                recommendations.columns = [
-                    "Recommendations",
-                    "Occurences",
-                    "ReportURL",
-                    "Rank",
-                    "Pass% Increase - " + str(round(totalImpact, 2)) + "%",
-                ]
-            recommendations = recommendations[
-                recommendations.Recommendations.astype(str) != "-"
-            ]
-            recommendations = recommendations.to_html(
-                classes="mystyle",
-                table_id="report",
-                index=False,
-                render_links=True,
-                escape=False,
-            )
-            recommendations = style_df_email(recommendations)
-            with open(email_report_filename, "a") as f:
-                f.write(
-                    get_html_string_email(graphs).format(
-                        table=df.to_html(
-                            classes="mystyle",
-                            table_id="report",
-                            index=False,
-                            render_links=True,
-                            escape=False,
-                        )
-                    )
-                )
-            graphs.clear()
-            with open(live_report_filename, "a") as f:
-                f.write(
-                    get_html_string(graphs).format(
-                        table=df.to_html(
-                            classes="mystyle",
-                            table_id="report",
-                            index=False,
-                            render_links=True,
-                            escape=False,
-                        )
-                    )
-                )
-            with open(live_report_filename, "a") as f:
-                f.write(''.join(interactive_graphs)
-                )
+            process_failures(df, failed_blocked, topfailedTCNames, graphs, interactive_graphs, failed, passed, blocked)
             import webbrowser
             import http.server
             import socketserver
