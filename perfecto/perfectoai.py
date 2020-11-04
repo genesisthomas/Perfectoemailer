@@ -1,55 +1,56 @@
 #!/usr/bin/env python
-from json2html import *
-import collections
-from re import MULTILINE
-import urllib.request, urllib.parse, urllib.error
-import time
-import unicodedata
-import os
-from xml.dom import minidom
-import json
-import re
-from termcolor import colored
-import shutil
-import pandas
-import webbrowser
-import matplotlib.ticker as ticker
-import matplotlib.pyplot as plt
-import io
-import base64
-import html
-import pylab as pl
-import requests
-import time
-import datetime
-from datetime import timedelta
-import traceback
 import argparse
+import base64
+import collections
+import configparser
+import datetime
+import glob
+import html
+import io
+import json
 import multiprocessing
-from multiprocessing import freeze_support, Pool, Process
-import ssl
-import tempfile
+import os
 import platform
-from colorama import init
-import xml.etree.ElementTree as ETree
-from openpyxl import Workbook
-from openpyxl.styles import Alignment
-from pandas.plotting import table
+import re
+import shutil
+import ssl
 import sys
-import numpy as np
-from openpyxl.reader.excel import load_workbook
-from jenkinsapi.jenkins import Jenkins
+import tempfile
+import time
+import traceback
+import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
-from fbprophet.plot import plot_plotly
+import webbrowser
+import xml.etree.ElementTree as ETree
 from collections import Counter
 from datetime import datetime, timedelta
+from multiprocessing import Pool, Process, freeze_support
+from re import MULTILINE
+from urllib.error import HTTPError
+from xml.dom import minidom
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
+import pandas
+import pylab as pl
+import requests
+import tzlocal
+from colorama import init
 from dateutil.parser import parse
 from easydict import EasyDict as edict
+from fbprophet.plot import plot_plotly
+from jenkinsapi.jenkins import Jenkins
+from json2html import *
+from openpyxl import Workbook
+from openpyxl.reader.excel import load_workbook
+from openpyxl.styles import Alignment
 from pandas.io.json import json_normalize
-from urllib.error import HTTPError
-import configparser
-import glob
-import tzlocal
+from pandas.plotting import table
+from termcolor import colored
 
 """ Microsoft Visual C++ required, cython required for pandas installation, """
 TEMP_DIR = "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
@@ -83,6 +84,7 @@ cleanedFailureList = {}
 suggesstionsDict = {}
 failurereasons = {}
 issues = {}
+issues_email = ""
 topfailedtable = {}
 monthlyStats = {}
 title = ""
@@ -1122,9 +1124,10 @@ def prepareReport(jobName, jobNumber, reportTag):
     width=400
     height=400
     if trends == "true":
-        import plotly.express as px
-        import plotly
         import subprocess
+
+        import plotly
+        import plotly.express as px
         if os.name == 'nt':
             DETACHED_PROCESS = 0x00000008
             subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
@@ -1213,9 +1216,9 @@ def prepareReport(jobName, jobNumber, reportTag):
                 .sort_values("#status", ascending=False)
             )
             radio = 'style="box-sizing: border-box; display: none;"'
-            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; background-color:white;-webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
+            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
             reportDiv = (
-                'style="box-sizing: border-box; overflow-x: auto; text-align: center;"'
+                'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
             )
             predictionDiv = 'style="overflow-x: auto;text-align: center;display: inline-block;float: left;background-color:white;"'
             header = 'align=center; style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: darkslategray; background-color: darkkhaki; border: 3px solid antiquewhite;"'
@@ -1772,7 +1775,7 @@ def get_style():
                     font-size: 12px;
                     position:relative;
                     padding: 5px;
-                    width:10%;
+                    width:10% !important;
                     color: black;
                     border-left: 1px solid #333;
                     border-right: 1px solid #333;
@@ -1780,7 +1783,7 @@ def get_style():
                     text-align: center;
                 }}
 
-                table.mystyle td:first-child {{ text-align: left; }}   
+                table.mystyle td:first-child {{ text-align: left; width:40% !important; }}   
 
                 table.mystyle thead {{
                     background: grey;
@@ -1934,7 +1937,7 @@ def get_style():
                 }}
                 .reportDiv {{
                     overflow-x: auto;
-                    text-align: center;
+                    text-align: -webkit-center;
                 }}
                 .predictionDiv {{
                     overflow-x: auto;
@@ -2186,14 +2189,15 @@ def get_failure_html_string(table):
 
 def get_html_string(graphs, tagrec, tagLinks):
     bg = os.environ["bgcolor"]
+    heading = os.environ["title"]
     string = (
         """
     <html lang="en">
        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     		     <head><title aria-label="Report">"""
-        + str(os.environ["cloudName"]).upper()
-        + """ Report</title>
+        + heading 
+        + """</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
     <body style="background-color:"""
@@ -2201,22 +2205,34 @@ def get_html_string(graphs, tagrec, tagLinks):
         + """;">
     """
         + get_style()
+        + """ <div style="
+          overflow-x: auto;
+          text-align: center;
+          color: #e5e7cc;
+          background-color: #22283a;
+          font-family: Helvetica, Arial, sans-serif;
+          font-size: 24px;
+          font-weight: bold;
+          padding: 5px 5px 10px 10px;
+          white-space: pre-line;box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        "><img alt="logo" style="width:100px !important; height:30px !important;" src="https://www.perfecto.io/sites/perfecto/themes/custom/perfecto/logo.svg">
+        """ + heading + """</div>"""
         + """<div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
         """
         + title +
         """
         </div><div id="nestle-section">
-        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">"""  + str(os.environ["cloudName"]).upper() + """ Report</label>
+        <input type="radio" id="tab1" name="tabs1" checked=""/><label for="tab1">Summary Report</label>
         <div class="tab-content1"> </p><div class="reportDiv"> """
         + execution_summary
         + """ alt='execution summary' id='reportDiv'> </img></br></div></div>"""
         + """<div class="reportDiv">"""
-        + execution_status
+        + execution_status 
+        + per_job_status
+        + per_tag_status
         + """ </div></br><input type="radio" id="tab2" name="tabs" checked=""/><label for="tab2">OS Summary</label><div class="tab-content1">
           <div class="reportDiv">"""
         + monthlyStats
-        + """ </div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Issues</label><div class="tab-content1">
-          <div class="reportDiv">"""
         + issues
         + """ <br><a href="./"""  + str(os.environ["cloudName"]) + """_failures.html" style="white-space:nowrap;text-decoration:none;background-color: rgb(195, 132, 49);color: white;padding: 8px 16px;font-family: sans-serif;border-radius: 3px;">All Failures</a>"""
         + tagLinks
@@ -2244,6 +2260,7 @@ def get_html_string(graphs, tagrec, tagLinks):
 
 def get_html_string_email(graphs, tagrec):
     bg = os.environ["bgcolor"]
+    heading = os.environ["title"]
     header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
     tabcontent = (
         'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: block;background-color:'
@@ -2258,19 +2275,29 @@ def get_html_string_email(graphs, tagrec):
        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     		     <head><title aria-label="Report">"""
-        + str(os.environ["cloudName"]).upper()
-        + """ Report</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
+        + heading
+        +"""</title><meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
+            <style> table.mystyle td:first-child {{ text-align: left; width:40% !important; }}</style>
     <body style="box-sizing: border-box; height: 100%; background-repeat: repeat-y; background-position: right; background-size: contain; background-attachment: initial; opacity: .93; background-color:"""
         + bg
-        + """;">
-        """+ """<div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
+        + """;"> <div style="
+          overflow-x: auto;
+          text-align: center;
+          color: #e5e7cc;
+          background-color: #22283a;
+          font-family: Helvetica, Arial, sans-serif;
+          font-size: 24px;
+          font-weight: bold;
+          padding: 5px 5px 10px 10px;
+          white-space: pre-line;box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        "><img alt="logo" style="width:100px !important; height:30px !important;" src="https://www.perfecto.io/sites/perfecto/themes/custom/perfecto/logo.svg">
+        """  + heading + """</div><div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
         """
         + title +
         """<div """
         + header
-        + """><b><center>Summary Details</center></b></label></div><div class="tab-content1" """
+        + """><b><center>Summary Report</center></b></label></div><div class="tab-content1" """
         + tabcontent
         + """>
         <div class="reportDiv" """
@@ -2283,24 +2310,19 @@ def get_html_string_email(graphs, tagrec):
         + reportDiv
         + """>"""
         + execution_status
+        + per_job_status_email
+        + per_tag_status_email
         + """<br></div><div """
         + header
-        + """><b><center>OS Summary</center></b></label></div><div class="tab-content1" """
+        + """</div>"""
+        + """<b><center>OS Summary</center></b></label></div><div class="tab-content1" """
         + tabcontent
         + """>
         <div class="reportDiv" """
         + reportDiv
         + """>"""
         + monthlyStats
-        + """<br></div><div """
-        + header
-        + """><b><center>Issues</center></b></label></div><div class="tab-content1" """
-        + tabcontent
-        + """>
-        <div class="reportDiv" """
-        + reportDiv
-        + """>"""
-        + issues
+        + issues_email
         + """<br></div></div><div """
         + header
         + """><b><center>Custom Failure Reasons</center></b></label></div><div class="tab-content1" """
@@ -3079,7 +3101,7 @@ def style_df_email(df):
     return (
         df.replace(
             '<table border="1" class="dataframe mystyle" id="report">',
-            '<table border="1" class="dataframe mystyle" id="report" style="box-sizing: border-box; font-size: 12pt; font-family:Trebuchet MS, Helvetica, sans-serif; border-collapse: collapse; border: 2px solid black; margin: auto; background-color: #fffffa; box-shadow: 0 0 30px rgba(145, 11, 11, 0.4); overflow-x: auto; min-width: 70%;" bgcolor="#fffffa">',
+            '<table border="1" class="dataframe mystyle" id="report" style="box-sizing: border-box; font-size: 12pt; font-family:Trebuchet MS, Helvetica, sans-serif; border-collapse: collapse; border: 2px solid black;  margin-left:5%;margin-right:5%; margin:auto;background-color: #fffffa; box-shadow: 0 0 30px rgba(145, 11, 11, 0.4); overflow-x: auto; min-width: 60%; max-width:80%;" bgcolor="#fffffa">',
         )
         .replace("<tr>", '<tr style="box-sizing: border-box;" align="center">')
         .replace(
@@ -3093,7 +3115,7 @@ def style_df_email(df):
         .replace("<tbody>", '<tbody style="box-sizing: border-box;">')
         .replace(
             "<td>",
-            '<td style="box-sizing: border-box; font-size: 12px; position: relative; padding: 5px; width: 10%; color: black; border-left: 1px solid #333; border-right: 1px solid #333; background: rgba(255, 253, 207, 0.58);" width="15%" align="center">',
+            '<td style="box-sizing: border-box; font-size: 12px; position: relative; padding: 5px; color: black; border-left: 1px solid #333; border-right: 1px solid #333; background: rgba(255, 253, 207, 0.58);width:15%;" align="center">',
         )
     )
 
@@ -3260,6 +3282,77 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
             ],
         }
     )
+    header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
+    perJob = []
+    for i, job in enumerate(jobName.split(";")):
+        if(job != ""):
+            job_df = df.loc[(df["job/name"] == job)]
+            job_total = job_df.shape[0]
+            failed = job_df[(job_df["Test Status"] == "FAILED")].shape[0]
+            passed = job_df[(job_df["Test Status"] == "PASSED")].shape[0]
+            blocked = job_df[(job_df["Test Status"] == "BLOCKED")].shape[0]
+            unknown = job_df[(job_df["Test Status"] == "UNKNOWN")].shape[0]
+            perJob.append({ "Job": job, "#Executions": job_total, "#Pass": passed, "#Failed": failed, "#Blocked": blocked, "#Unknowns": unknown, "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
+   
+    global per_job_status
+    global per_job_status_email
+    per_job_status = ""
+    per_job_status_email = ""
+    per_job = pandas.DataFrame.from_dict(perJob)
+
+    if(per_job.shape[0] > 0):
+        per_job =  per_job.to_html(
+            classes="mystyle",
+            table_id="report",
+            index=False,
+            render_links=True,
+            escape=False,
+        )
+        per_job_status = """ <br><label for="tab2" style="background:  darkkhaki !important; color:rgb(15, 61, 16) !important;">Job wise Summary</label><br><br>""" + style_df_email(per_job)
+        per_job_status_email = style_df_email(per_job)
+        per_job_status_email = """ <br><div """ + header+ """><center><label for="tab2" style="background:  darkkhaki !important; color:black !important;font-weight:bold;">Job wise Summary</label></center></div><br><br>""" + per_job_status_email
+       
+    
+    perTag = []
+    tags_cols = [col for col in df.columns if 'tags' in col]
+    exp_tags = ""
+    if(reportTag == ''):
+        exp_tags = recommend_tag
+    else:
+        exp_tags = reportTag
+    for i, tag in enumerate(exp_tags.split(";")):
+        if(tag != ""):
+            query = '' 
+            for i, col in enumerate(tags_cols):
+                query += '`' + col + "` == '" + tag + "'"
+                if(i != (len(tags_cols) - 1)):
+                    query += ' or '
+            tag_df = df.query(query)
+            job_total = tag_df.shape[0]
+            failed = tag_df[(tag_df["Test Status"] == "FAILED")].shape[0]
+            passed = tag_df[(tag_df["Test Status"] == "PASSED")].shape[0]
+            blocked = tag_df[(tag_df["Test Status"] == "BLOCKED")].shape[0]
+            unknown = tag_df[(tag_df["Test Status"] == "UNKNOWN")].shape[0]
+            perTag.append({ "Tag": tag, "#Executions": job_total, "#Pass": passed, "#Failed": failed, "#Blocked": blocked, "#Unknowns": unknown, "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
+   
+    global per_tag_status
+    global per_tag_status_email
+    per_tag_status = ""
+    per_tag_status_email = ""
+    per_tag = pandas.DataFrame.from_dict(perTag)
+
+    if(per_tag.shape[0] > 0):
+        per_tag = per_tag.to_html(
+            classes="mystyle",
+            table_id="report",
+            index=False,
+            render_links=True,
+            escape=False,
+        )
+        per_tag_status =  """ <br><label for="tab2" style="background:  darkkhaki !important; color:rgb(15, 61, 16) !important;">Tag wise Summary</label><br><br>""" + style_df_email(per_tag)
+        per_tag_status_email = style_df_email(per_tag)
+        per_tag_status_email = """ <br><div """ + header+ """><center><label for="tab2" style="background:  darkkhaki !important; color:black !important;font-weight:bold;">Tag wise Summary</label></center></div><br><br>""" + per_tag_status_email
+       
     recommendations_count = int(str(os.environ["recommendations"]))
     i = 0
     dynamic_rec = []
@@ -3361,15 +3454,38 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
     )
     execution_status = style_df_email(execution_status)
     global issues
-    issues = pandas.DataFrame.from_dict(jsonObj.issues)
-    issues = issues.to_html(
-        classes="mystyle",
-        table_id="report",
-        index=False,
-        render_links=True,
-        escape=False,
-    )
-    issues = style_df_email(issues)
+    issues = ""
+    global issues_email
+    issues_email = ""
+    if("true" in str(os.environ["showIssues"])):
+        issues_df = pandas.DataFrame.from_dict(jsonObj.issues)
+        issues_ori = issues_df.to_html(
+            classes="mystyle",
+            table_id="report",
+            index=False,
+            render_links=True,
+            escape=False,
+        )
+        header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
+        issues = """</div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Issues</label><div class="tab-content1">
+          <div class="reportDiv">""" + issues_ori
+        issues = style_df_email(issues)
+        tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
+        reportDiv = (
+            'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
+        )
+        issues_email = str("""<br></div><div """
+        + header
+        + """</div>"""
+        + """<b><center>Issues</center></b></label></div><div class="tab-content1" """
+        + tabcontent
+        + """>
+        <div class="reportDiv" """
+        + reportDiv
+        + """>""") + style_df_email(issues_ori)
+    else:
+        issues = """</div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Groups</label><div class="tab-content1">
+          <div class="reportDiv">""" + issues
     recommendations = pandas.DataFrame.from_dict(jsonObj.recommendation)
     # recommendations = recommendations.sort_values(['impact'], ascending=False)
     if totalImpact > 100:
@@ -3599,6 +3715,8 @@ def main():
                 global reportTag
                 global live_report_filename
                 global recommend_tag
+                global title_heading
+                global showIssues
                 consolidate = ""
                 xlformat = "csv"
                 port = ""
@@ -3612,6 +3730,10 @@ def main():
                 recommendations_count = 5
                 recommend_tag = ""
                 report_array = email_report.split("|")
+                title_heading = str(os.environ["cloudName"]).upper()  + " Report"
+                os.environ["title"] = title_heading
+                showIssues = "true"
+                os.environ["showIssues"] = showIssues
                 for item in report_array:
                     if "report" in item:
                         report, criteria = get_report_details(
@@ -3693,6 +3815,15 @@ def main():
                                 recommend_tag, criteria = get_report_details(
                             item, temp, "recommend_tag", criteria
                         )
+                    if "title" in item:
+                        title_heading, criteria = get_report_details(
+                            item, temp, "title", criteria
+                        )
+                    if "showIssues" in item:
+                        showIssues, criteria = get_report_details(
+                        item, temp, "showIssues", criteria
+                    )
+                        
             except Exception as e:
                 raise Exception(
                     "Verify parameters of report, split them by | seperator/ " + str(e)
@@ -3700,6 +3831,7 @@ def main():
                 sys.exit(-1)
             if "attachmentName=" in email_report:
                 live_report_filename = live_report_filename + ".html"
+            os.environ["title"] = title_heading
             os.environ["xlformat"] = xlformat
             os.environ["regex"] = ""
             os.environ["regex"] = regex
@@ -3717,6 +3849,8 @@ def main():
             os.environ["recommendations"] = str(recommendations_count)
             os.environ["recommend_tag"] = ""
             os.environ["recommend_tag"] = str(recommend_tag)
+            os.environ["showIssues"] = str(showIssues)
+            
             filelist = glob.glob(os.path.join("*." + xlformat))
             for f in filelist:
                 os.remove(f)
@@ -3850,10 +3984,10 @@ def main():
             )
             topfailedtable = style_df_email(topfailedtable)
             process_failures(df, failed_blocked, topfailedTCNames, graphs, interactive_graphs, failed, passed, blocked)
-            import webbrowser
             import http.server
-            import socketserver
             import socket
+            import socketserver
+            import webbrowser
 
             if port != "":
                 PORT = int(port)
