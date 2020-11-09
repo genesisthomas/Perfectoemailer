@@ -1011,7 +1011,6 @@ def pastDateToMS(startDate, daysOlder):
     dt_obj = datetime.strptime(
         startDate + " 00:00:00,00", "%Y-%m-%d %H:%M:%S,%f"
     ) - timedelta(days=daysOlder)
-    print("startExecutionTime: " + str(dt_obj))
     millisec = dt_obj.timestamp() * 1000
     oldmilliSecs = round(int(millisec))
     return oldmilliSecs
@@ -3119,6 +3118,41 @@ def style_df_email(df):
         )
     )
 
+def createHref(jobName, tag, status, content):
+    jobList = ""
+    tagList = ""
+    jobNumList = ""
+    if(isinstance(content, int) and int(content) == 0):
+        return content
+    else:
+        if(startDate):
+            startExecutionTime =  pastDateToMS(startDate, 0)
+            endExecutionTime = round(int(datetime.strptime(
+                str(endDate) + " 23:59:59,999", "%Y-%m-%d %H:%M:%S,%f"
+            ).timestamp() * 1000))
+            url = "https://"+ os.environ["cloudName"] + ".app.perfectomobile.com/reporting/library?startExecutionTime[0]=" + str(startExecutionTime) + "&startExecutionTime[1]=custom&endExecutionTime[0]=" + str(endExecutionTime)
+        else:
+            url = "https://"+ os.environ["cloudName"] + ".app.perfectomobile.com/reporting/library?"
+        if(jobName):
+            for i, job in enumerate(jobName.split(";")):
+                    jobList = jobList + "&jobName[" + str(i) + "]=" + job
+            url = url + jobList
+        if(jobNumber):
+            for i, jobNum in enumerate(jobNumber.split(";")):
+                jobNumList = jobNumList + "&jobNumber[" + str(i) + "]=" + jobNum
+            url = url + jobNumList
+        if(tag):
+            for i, job in enumerate(tag.split(";")):
+                    tagList = tagList + "&tags[" + str(i) + "]=" + job
+            url = url + tagList
+        if(status):
+            url = url + '&status[0]='+status+'&_search=&_searchViewAll=false'
+        else:
+            url = url + '&_search=&_searchViewAll=false'
+            
+        url = '<a target="_blank" href="' + str(url) + '">' + str(content) + "</a>"
+        return url
+
 def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, blocked, name, bool):
     labIssuesCount = 0
     totalFailCount = 0
@@ -3256,11 +3290,11 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
             "status": [
                 {
                     "#Total": "Count ->",
-                    "#Executions": totalTCCount,
-                    "#Pass": totalPassCount,
-                    "#Failed": totalFailCount,
-                    "#Blocked": blockedCount,
-                    "#Unknowns": totalUnknownCount,
+                    "#Executions": createHref(jobName, reportTag, '', totalTCCount),
+                    "#Pass": createHref(jobName, reportTag, 'PASSED', totalPassCount),
+                    "#Failed": createHref(jobName, reportTag, 'FAILED', totalFailCount),
+                    "#Blocked": createHref(jobName, reportTag, 'BLOCKED', blockedCount),
+                    "#Unknowns": createHref(jobName, reportTag, 'UNKNOWN', totalUnknownCount),
                     "Overall Pass %": str(
                         int(percentageCalculator(totalPassCount, totalTCCount))
                     )
@@ -3284,6 +3318,7 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
     )
     header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
     perJob = []
+    tag = ''
     for i, job in enumerate(jobName.split(";")):
         if(job != ""):
             job_df = df.loc[(df["job/name"] == job)]
@@ -3292,7 +3327,7 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
             passed = job_df[(job_df["Test Status"] == "PASSED")].shape[0]
             blocked = job_df[(job_df["Test Status"] == "BLOCKED")].shape[0]
             unknown = job_df[(job_df["Test Status"] == "UNKNOWN")].shape[0]
-            perJob.append({ "Job": job, "#Executions": job_total, "#Pass": passed, "#Failed": failed, "#Blocked": blocked, "#Unknowns": unknown, "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
+            perJob.append({ "Job": createHref(job, "", '', job), "#Executions": createHref(job, "", '', job_total), "#Pass": createHref(job, "", 'PASSED', passed) , "#Failed": createHref(job, "", 'FAILED', failed), "#Blocked": createHref(job, "", 'BLOCKED', blocked), "#Unknowns": createHref(job, "", 'UNKNOWN', unknown), "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
    
     global per_job_status
     global per_job_status_email
@@ -3317,7 +3352,7 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
     tags_cols = [col for col in df.columns if 'tags' in col]
     exp_tags = ""
     if(reportTag == ''):
-        exp_tags = recommend_tag
+        exp_tags = os.environ["recommend_tag"]
     else:
         exp_tags = reportTag
     for i, tag in enumerate(exp_tags.split(";")):
@@ -3333,7 +3368,7 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
             passed = tag_df[(tag_df["Test Status"] == "PASSED")].shape[0]
             blocked = tag_df[(tag_df["Test Status"] == "BLOCKED")].shape[0]
             unknown = tag_df[(tag_df["Test Status"] == "UNKNOWN")].shape[0]
-            perTag.append({ "Tag": tag, "#Executions": job_total, "#Pass": passed, "#Failed": failed, "#Blocked": blocked, "#Unknowns": unknown, "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
+            perTag.append({ "Tag": createHref(jobName, tag, '', tag), "#Executions": createHref(jobName, tag, '', job_total), "#Pass": createHref(jobName, tag, 'PASSED', passed) , "#Failed": createHref(jobName, tag, 'FAILED', failed), "#Blocked": createHref(jobName, tag, 'BLOCKED', blocked), "#Unknowns": createHref(jobName, tag, 'UNKNOWN', unknown), "Overall Pass %": str(int(percentageCalculator(passed, job_total)))+ "%"})
    
     global per_tag_status
     global per_tag_status_email
