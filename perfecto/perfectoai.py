@@ -691,6 +691,28 @@ def create_summary(df, title, column, name):
     return summary
 
 
+def create_pie(df, title, column, name):
+    fig = pl.figure(figsize=(20, 2))
+    pl.suptitle(title)
+    ax1 = pl.subplot(121, aspect="equal", facecolor="#fffffa")
+    fig.patch.set_facecolor("yellow")
+    fig.patch.set_alpha(1)
+    df[column].value_counts().sort_index().plot(
+        kind="pie",
+        y="%",
+        ax=ax1,
+        autopct="%1.1f%%",
+        startangle=30,
+        shadow=False,
+        legend=False,
+        x=df[column].unique,
+        fontsize=7,
+    )
+    pl.ylabel("")
+    encoded = fig_to_base64(os.path.join(TEMP_DIR, "results", name + ".png"))
+    summary = '<img src="data:image/png;base64, {}"'.format(encoded.decode("utf-8"))
+    return summary
+
 def prepare_graph(df, column):
     """ prepare graph """
     fig = pl.figure()
@@ -3922,7 +3944,7 @@ def main():
                 title = report + criteria
             if reportTag != "":
                 title += "<br> tags: " + reportTag
-            execution_summary = create_summary(df, "", "status", "device_summary",)
+            execution_summary = create_pie(df, "", "status", "device_summary",)
             failed = df[(df["status"] == "FAILED")]
             passed = df[(df["status"] == "PASSED")]
             blocked = df[(df["status"] == "BLOCKED")]
