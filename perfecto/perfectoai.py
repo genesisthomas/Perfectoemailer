@@ -664,7 +664,7 @@ def create_summary(df, title, column, name):
     fig = pl.figure(figsize=(15, 2))
     pl.suptitle(title)
     ax1 = pl.subplot(121, aspect="equal", facecolor="#fffffa")
-    fig.patch.set_facecolor("yellow")
+    fig.patch.set_facecolor("white")
     fig.patch.set_alpha(1)
     df[column].value_counts().sort_index().plot(
         kind="pie",
@@ -680,7 +680,7 @@ def create_summary(df, title, column, name):
     pl.ylabel("")
     # plot table
     ax2 = pl.subplot(122, facecolor="#fffffa")
-    ax2.patch.set_facecolor("yellow")
+    ax2.patch.set_facecolor("white")
     ax2.patch.set_alpha(1)
     pl.axis("off")
     tbl = table(ax2, df[column].value_counts(), loc="center")
@@ -692,10 +692,10 @@ def create_summary(df, title, column, name):
 
 
 def create_pie(df, title, column, name):
-    fig = pl.figure(figsize=(20, 2))
+    fig = pl.figure(figsize=(25, 3))
     pl.suptitle(title)
-    ax1 = pl.subplot(121, aspect="equal", facecolor="#fffffa")
-    fig.patch.set_facecolor("yellow")
+    ax1 = pl.subplot(121, aspect="equal", facecolor="white")
+    fig.patch.set_facecolor("white")
     fig.patch.set_alpha(1)
     df[column].value_counts().sort_index().plot(
         kind="pie",
@@ -703,12 +703,17 @@ def create_pie(df, title, column, name):
         ax=ax1,
         autopct="%1.1f%%",
         startangle=30,
-        shadow=False,
-        legend=False,
+        shadow=True,
+        labels=None,
+        legend=True,
         x=df[column].unique,
-        fontsize=7,
+        fontsize=10,
     )
     pl.ylabel("")
+    status = []
+    for i in range(len(df[column].value_counts().sort_index().to_frame())) :
+        status.append(df[column].value_counts().sort_index().to_frame().iloc[i].name)
+    ax1.legend(labels=status, bbox_to_anchor=(1,0.5), loc="top right")
     encoded = fig_to_base64(os.path.join(TEMP_DIR, "results", name + ".png"))
     summary = '<img src="data:image/png;base64, {}"'.format(encoded.decode("utf-8"))
     return summary
@@ -1237,7 +1242,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                 .sort_values("#status", ascending=False)
             )
             radio = 'style="box-sizing: border-box; display: none;"'
-            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
+            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: inline;justify-content: center;"'
             reportDiv = (
                 'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
             )
@@ -2022,7 +2027,7 @@ def get_style():
                     -o-transition: height 1s ease;
                     transition: height 1s ease;
                     overflow: scroll;
-                    display: flex;
+                    display: inline;
                     justify-content: center;  
                 }}}}
 
@@ -3527,7 +3532,7 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
         issues = """</div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Issues</label><div class="tab-content1">
           <div class="reportDiv">""" + issues_ori
         issues = style_df_email(issues)
-        tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: flex;justify-content: center;"'
+        tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: inline;justify-content: center;"'
         reportDiv = (
             'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
         )
