@@ -36,6 +36,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas
+import plotly
+import plotly.express as px
 import pylab as pl
 import requests
 import tzlocal
@@ -692,30 +694,17 @@ def create_summary(df, title, column, name):
 
 
 def create_pie(df, title, column, name):
-    fig = pl.figure(figsize=(25, 3))
-    pl.suptitle(title)
-    ax1 = pl.subplot(121, aspect="equal", facecolor="white")
-    fig.patch.set_facecolor("white")
-    fig.patch.set_alpha(1)
-    df[column].value_counts().sort_index().plot(
-        kind="pie",
-        y="%",
-        ax=ax1,
-        autopct="%1.1f%%",
-        startangle=30,
-        shadow=True,
-        labels=None,
-        legend=True,
-        x=df[column].unique,
-        fontsize=10,
-    )
-    pl.ylabel("")
     status = []
     for i in range(len(df[column].value_counts().sort_index().to_frame())) :
         status.append(df[column].value_counts().sort_index().to_frame().iloc[i].name)
-    ax1.legend(labels=status, bbox_to_anchor=(1,0.5), loc="top right")
-    encoded = fig_to_base64(os.path.join(TEMP_DIR, "results", name + ".png"))
-    summary = '<img src="data:image/png;base64, {}"'.format(encoded.decode("utf-8"))
+    fig = px.pie(values=df['status'].value_counts().sort_index().to_frame().values, names=status, color=status, opacity=1, hole=0.5, width=490, height=200,  
+                 color_discrete_map={'PASSED':'#35a600',
+                                 'FAILED':'#f14c4c',
+                                 'BLOCKED':'#4cb2ff',
+                                 'UNKNOWN':'#929da5'})     
+    fig.update_layout(margin=dict(t=0, b=0, l=0, r=0))
+    img = fig.to_image(format="png")
+    summary = '<img src="data:image/png;base64, {}"'.format(base64.b64encode(img).decode("utf-8"))
     return summary
 
 def prepare_graph(df, column):
@@ -1151,9 +1140,6 @@ def prepareReport(jobName, jobNumber, reportTag):
     height=400
     if trends == "true":
         import subprocess
-
-        import plotly
-        import plotly.express as px
         if os.name == 'nt':
             DETACHED_PROCESS = 0x00000008
             subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
