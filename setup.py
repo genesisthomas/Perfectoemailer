@@ -15,8 +15,8 @@ with open("README.md", "r") as fh:
 
 setup(
      name='perfectoai',
-    #   version='1.0.19', #testpypi
-     version='1.0.25',
+    #   version='1.0.25', #testpypi
+      version='1.0.30',
      author="Genesis Thomas",
      author_email="gthomas@perforce.com",
      description="perfectoAI is an automated emailable reporter along with AI graphs & predictions",

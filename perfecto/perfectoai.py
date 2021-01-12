@@ -14,6 +14,7 @@ import platform
 import re
 import shutil
 import ssl
+import subprocess
 import sys
 import tempfile
 import time
@@ -1139,14 +1140,6 @@ def prepareReport(jobName, jobNumber, reportTag):
     width=400
     height=400
     if trends == "true":
-        import subprocess
-        if os.name == 'nt':
-            DETACHED_PROCESS = 0x00000008
-            subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
-            orcaport = os.environ["orcaport"]
-            subprocess.Popen(["orca", "serve", "-p", orcaport], stdout=subprocess.PIPE, shell=True)
-            plotly.io.orca.config.server_url = "http://localhost:" + orcaport
-            plotly.io.orca.status._props["state"] = "validated" 
         counter = 7
         with open(live_report_filename, "a") as f:
             f.write('<div id="nestle-section">')
@@ -1228,7 +1221,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                 .sort_values("#status", ascending=False)
             )
             radio = 'style="box-sizing: border-box; display: none;"'
-            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: inline;justify-content: center;"'
+            tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: auto; display: inline;justify-content: center;"'
             reportDiv = (
                 'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
             )
@@ -1290,7 +1283,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                         + '">job: '
                         + job
                         + tag
-                        + '</label><div class="tab-content1" style="background-color:white;">'
+                        + '</label><div class="tab-content1">'
                         + str(fig.to_html(full_html=False, include_plotlyjs="cdn")).replace("<div",'<div style="float:left;"')    
                     )
                 # interactive_graphs.append("</div>")
@@ -1356,10 +1349,6 @@ def prepareReport(jobName, jobNumber, reportTag):
         interactive_graphs.append("</div>")
         with open(live_report_filename, "a") as f:
             f.write("</div>")
-    if os.name == 'nt':
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        subprocess.call('taskkill /F /IM Electron.exe', startupinfo=si)
     return graphs, interactive_graphs, df
 
 
@@ -1948,7 +1937,7 @@ def get_style():
                     text-align: center;
                 }}
                 .reportDiv {{
-                    overflow-x: auto;
+                    overflow-x: visible;
                     text-align: -webkit-center;
                 }}
                 .predictionDiv {{
@@ -2001,7 +1990,7 @@ def get_style():
                     -webkit-transition: height 1s ease;
                     -o-transition: height 1s ease;
                     transition: height 1s ease;
-                    overflow: scroll;
+                    overflow: auto;
                     display: block;
                 }}}}
                 @media screen and (min-width: 601px) {{
@@ -2012,7 +2001,7 @@ def get_style():
                     -webkit-transition: height 1s ease;
                     -o-transition: height 1s ease;
                     transition: height 1s ease;
-                    overflow: scroll;
+                    overflow: auto;
                     display: inline;
                     justify-content: center;  
                 }}}}
@@ -2049,7 +2038,7 @@ def get_failure_html_string(table):
             + """;">
         <style>
         .reportDiv {
-                    overflow-x: auto;
+                    overflow-x: visible;
                     text-align: center;
         }
         .mystyle {
@@ -2275,7 +2264,7 @@ def get_html_string_email(graphs, tagrec):
     heading = os.environ["title"]
     header = 'style="box-sizing: border-box; float: left; width: 100%; padding: 1px 0; text-align: center; cursor: pointer; font-size: 16px; color: black; background-color: darkkhaki; border: 3px solid antiquewhite;"'
     tabcontent = (
-        'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: block;background-color:'
+        'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: auto; display: block;background-color:'
         + bg
         + ';"'
     )
@@ -3518,9 +3507,9 @@ def get_recommendations(df, failed_blocked, topfailedTCNames, failed, passed, bl
         issues = """</div></div><input type="radio" id="tab3" name="tabs" checked=""/><label for="tab3">Issues</label><div class="tab-content1">
           <div class="reportDiv">""" + issues_ori
         issues = style_df_email(issues)
-        tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: scroll; display: inline;justify-content: center;"'
+        tabcontent = 'style="box-sizing: border-box; padding: 10px; height: auto; -moz-transition: height 1s ease; -webkit-transition: height 1s ease; -o-transition: height 1s ease; transition: height 1s ease; overflow: auto; display: inline;justify-content: center;"'
         reportDiv = (
-            'style="box-sizing: border-box; overflow-x: auto; text-align: -webkit-center;"'
+            'style="box-sizing: border-box; overflow-x: visible; text-align: -webkit-center;"'
         )
         issues_email = str("""<br></div><div """
         + header
@@ -3877,6 +3866,7 @@ def main():
                     "Verify parameters of report, split them by | seperator/ " + str(e)
                 )
                 sys.exit(-1)
+   
             if "attachmentName=" in email_report:
                 live_report_filename = live_report_filename + ".html"
             os.environ["title"] = title_heading
@@ -3898,6 +3888,14 @@ def main():
             os.environ["recommend_tag"] = ""
             os.environ["recommend_tag"] = str(recommend_tag)
             os.environ["showIssues"] = str(showIssues)
+            
+            if os.name == 'nt':
+                DETACHED_PROCESS = 0x00000008
+                subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
+                orcaport = os.environ["orcaport"]
+                subprocess.Popen(["orca", "serve", "-p", orcaport], stdout=subprocess.PIPE, shell=True)
+                plotly.io.orca.config.server_url = "http://localhost:" + orcaport
+                plotly.io.orca.status._props["state"] = "validated" 
             
             filelist = glob.glob(os.path.join("*." + xlformat))
             for f in filelist:
@@ -3925,7 +3923,7 @@ def main():
                     + str(df["startTime"].iloc[0]).split(" ", 1)[0]
                 )
             elif startDate != "":
-                criteria += " <br>Start: " + startDate + ", End:" + endDate
+                criteria += " <br>Start: " + startDate + ", End: " + endDate
             global execution_summary
             global title
             title = ""
@@ -4219,13 +4217,19 @@ def main():
                 main()
             devlist.close()
             devlist.terminate()
-
+            if os.name == 'nt':
+                DETACHED_PROCESS = 0x00000008
+                subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
+    
             try:
                 if not platform.system() == "Darwin":
                     os.system("taskkill /f /im perfectoai.exe")
             except:
                 pass
     except Exception as e:
+        if os.name == 'nt':
+            DETACHED_PROCESS = 0x00000008
+            subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
         raise Exception("Oops!", e)
 
 
