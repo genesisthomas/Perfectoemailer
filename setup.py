@@ -15,8 +15,8 @@ with open("README.md", "r") as fh:
 
 setup(
      name='perfectoai',
-    #   version='1.0.25', #testpypi
-      version='1.0.30',
+    #   version='1.0.31', #testpypi
+      version='1.0.31',
      author="Genesis Thomas",
      author_email="gthomas@perforce.com",
      description="perfectoAI is an automated emailable reporter along with AI graphs & predictions",
@@ -26,7 +26,7 @@ setup(
      keywords = ['Perfecto', 'appium', 'selenium', 'testing', 'api', 'automation'],
      url="https://github.com/genesisthomas/PerfectoAI.git",
      install_requires=[
-            'json2html','jenkinsapi','requests','configparser','termcolor','numpy','cython','pandas','retrying','ephem','pymeeus','easydict','korean-lunar-calendar','MarkupSafe','jinja2','matplotlib', 'colorama','LunarCalendar','holidays','cmdstanpy','convertdate','openpyxl','wheel','pystan','xlrd','jinja2','tzlocal','plotly','fbprophet'
+            'json2html','jenkinsapi','requests','configparser','termcolor','numpy','cython','pandas==1.2.4','retrying','ephem','pymeeus','easydict', 'psutil', 'korean-lunar-calendar','MarkupSafe','jinja2','matplotlib', 'colorama','LunarCalendar','holidays','cmdstanpy==0.9.68','convertdate','openpyxl','wheel','pystan==2.19.1.1','xlrd','jinja2','tzlocal','plotly','prophet==1.0.1'
       ],
      packages=find_packages(),
      include_package_data=True,

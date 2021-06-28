@@ -45,7 +45,7 @@ import tzlocal
 from colorama import init
 from dateutil.parser import parse
 from easydict import EasyDict as edict
-from fbprophet.plot import plot_plotly
+from prophet.plot import plot_plotly
 from jenkinsapi.jenkins import Jenkins
 from json2html import *
 from openpyxl import Workbook
@@ -698,7 +698,8 @@ def create_pie(df, title, column, name):
     status = []
     for i in range(len(df[column].value_counts().sort_index().to_frame())) :
         status.append(df[column].value_counts().sort_index().to_frame().iloc[i].name)
-    fig = px.pie(values=df['status'].value_counts().sort_index().to_frame().values, names=status, color=status, opacity=1, hole=0.5, width=490, height=200,  
+    status_df = df['status'].value_counts().sort_index().to_frame()
+    fig = px.pie(status_df, values=status_df['status'], names=status, color=status, opacity=1, hole=0.5, width=490, height=200,  
                  color_discrete_map={'PASSED':'#35a600',
                                  'FAILED':'#f14c4c',
                                  'BLOCKED':'#4cb2ff',
@@ -1295,7 +1296,7 @@ def prepareReport(jobName, jobNumber, reportTag):
                         )
                         predict_df["cap"] = int(predict_df["y"].max()) * 2
                         predict_df["floor"] = 0
-                        from fbprophet import Prophet
+                        from prophet import Prophet
 
                         with suppress_stdout_stderr():
                             m = Prophet(
@@ -2215,7 +2216,7 @@ def get_html_string(graphs, tagrec, tagLinks):
           font-size: 24px;
           font-weight: bold;
           padding: 5px 5px 10px 10px;
-          white-space: pre-line;box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+          box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
         "><img alt="logo" style="width:100px !important; height:30px !important;" src="https://www.perfecto.io/sites/perfecto/themes/custom/perfecto/logo.svg">
         """ + heading + """</div>"""
         + """<div style="padding:1px 0; background-color:rgba(236, 213, 171, 0.56); color:black;text-align:center;font-family:Verdana,sans-serif;font-size:16px;width:100%;cursor:pointerfont-weight:bold">
@@ -3754,6 +3755,7 @@ def main():
                 global recommend_tag
                 global title_heading
                 global showIssues
+                global ci
                 consolidate = ""
                 xlformat = "csv"
                 port = ""
@@ -3764,6 +3766,7 @@ def main():
                 ci_jenkins_url = ""
                 ci_username = ""
                 ci_token = ""
+                ci = "false"
                 recommendations_count = 5
                 recommend_tag = ""
                 report_array = email_report.split("|")
@@ -3771,6 +3774,7 @@ def main():
                 os.environ["title"] = title_heading
                 showIssues = "true"
                 os.environ["showIssues"] = showIssues
+                os.environ["ci_execution"] = ci
                 for item in report_array:
                     if "report" in item:
                         report, criteria = get_report_details(
@@ -3888,6 +3892,7 @@ def main():
             os.environ["recommend_tag"] = ""
             os.environ["recommend_tag"] = str(recommend_tag)
             os.environ["showIssues"] = str(showIssues)
+            os.environ["ci_execution"] = str(ci)
             
             if os.name == 'nt':
                 DETACHED_PROCESS = 0x00000008
@@ -4052,9 +4057,10 @@ def main():
                     webbrowser.open(url, new=0)
                     httpd.serve_forever()
             else:
-                webbrowser.open(
-                    "file://" + os.path.join(os.getcwd(), live_report_filename), new=0
-                )
+                if("true" in str(os.environ["ci_execution"])):
+                    webbrowser.open(
+                        "file://" + os.path.join(os.getcwd(), live_report_filename), new=0
+                    )
                 print(
                     "Interactive Report: file://"
                     + os.path.join(os.getcwd(), live_report_filename)
@@ -4235,4 +4241,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    if os.name == 'nt':
+        DETACHED_PROCESS = 0x00000008
+        subprocess.call('taskkill /F /IM Electron.exe', creationflags=DETACHED_PROCESS)
     sys.exit()

@@ -17,6 +17,7 @@ samples/
 __pycache__/
 *.py[cod]
 *$py.class
+dev.md
 
 
 # virtualenv
