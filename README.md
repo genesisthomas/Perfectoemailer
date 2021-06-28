@@ -19,18 +19,18 @@
   4. Install Anaconda
     
   4. Run the following commands from conda power shell - Windows:
-        `pip uninstall fbprophet`
-        `pip install psutil`
-        `npm install -g electron@1.8.4 orca --unsafe-perm=true`
-        `pip install pystan==2.19.1.1`
-        `pip install perfectoai -U`
+        pip uninstall fbprophet
+        pip install psutil
+        npm install -g electron@1.8.4 orca --unsafe-perm=true
+        pip install pystan==2.19.1.1
+        pip install perfectoai -U
     
     mac:
-        `pip3 uninstall fbprophet`
-        `pip3 install psutil`
-        `sudo npm install -g electron@1.8.4 orca --unsafe-perm=true`
-        `pip3 install pystan==2.19.1.1`
-        `pip3 install perfectoai -U`
+        pip3 uninstall fbprophet
+        pip3 install psutil
+        sudo npm install -g electron@1.8.4 orca --unsafe-perm=true
+        pip3 install pystan==2.19.1.1
+        pip3 install perfectoai -U
 
 
   
